@@ -1,18 +1,16 @@
-# CRUD em Python com Django e ODBC (pyodbc)
+# CRUD em Python com ODBC (pyodbc)
 
-Este é um projeto simples de demonstração de um CRUD (Create, Read, Update, Delete) desenvolvido em **Python** utilizando **Django** e conexão direta via **pyodbc** com um banco de dados PostgreSQL.
+Este é um projeto simples e didático de um **CRUD** (Create, Read, Update, Delete) desenvolvido em **Python puro** utilizando conexão via **pyodbc** com banco de dados PostgreSQL.
 
-O objetivo do projeto é realizar operações SQL nativas diretamente no banco de dados, sem o uso de geradores de DAO ou Django ORM.
+O objetivo deste projeto é demonstrar como realizar operações SQL nativas diretamente no banco de dados sem a complexidade de frameworks web (como Django).
 
 ---
 
 ## 🛠️ Tecnologias Utilizadas
 
 - **Python 3**
-- **Django 6**
 - **pyodbc** (Driver ODBC do PostgreSQL)
 - **python-dotenv** (Gerenciamento de variáveis de ambiente)
-- **HTML5 Puro** (Interface minimalista sem frameworks CSS)
 
 ---
 
@@ -20,28 +18,20 @@ O objetivo do projeto é realizar operações SQL nativas diretamente no banco d
 
 ```text
 PythonDjangoODBC/
-├── .env                # Configurações de conexão do banco de dados
-├── manage.py           # Utilitário CLI do Django
-├── README.md           # Documentação do projeto
-├── main/               # Módulo principal da aplicação Django
-│   ├── __init__.py
-│   ├── settings.py     # Configurações do Django
-│   ├── urls.py         # Mapeamento de rotas
-│   ├── views.py        # Lógica do CRUD e consultas SQL via pyodbc
-│   └── wsgi.py
-└── templates/
-    └── index.html      # Página HTML única com formulário e tabela
+├── .env        # Configurações de conexão do banco de dados
+├── main.py     # Script principal contendo as funções de CRUD e o menu no terminal
+└── README.md   # Documentação do projeto
 ```
 
 ---
 
 ## ⚙️ Configuração do Ambiente
 
-1. Crie ou edite o arquivo `.env` na raiz do projeto com as credenciais do seu banco de dados:
+1. Certifique-se de que possui o arquivo `.env` na raiz do projeto com as credenciais do seu banco de dados:
 
 ```env
 DB_DRIVER=PostgreSQL Unicode(x64)
-DB_SERVER=seu_servidor.proxy.rlwy.net
+DB_SERVER=altaria.proxy.rlwy.net
 DB_PORT=28633
 DB_DATABASE=railway
 DB_USER=postgres
@@ -51,19 +41,26 @@ DB_PASSWORD=sua_senha
 2. Instale as dependências necessárias:
 
 ```bash
-pip install django pyodbc python-dotenv
+pip install pyodbc python-dotenv
 ```
 
 ---
 
-## 🚀 Como Executar o Projeto
+## 🚀 Como Executar
 
-1. Abra o terminal na pasta raiz do projeto.
-2. Execute o servidor de desenvolvimento do Django:
+Execute o script `main.py` direto no terminal:
 
 ```bash
-python manage.py runserver
+python main.py
 ```
 
-3. Acesse no navegador:
-👉 **[http://127.0.0.1:8000/](http://127.0.0.1:8000/)**
+Você verá o menu interativo:
+
+```text
+--- MENU CRUD ODBC (PYTHON) ---
+1. Listar Livros
+2. Cadastrar Novo Livro
+3. Atualizar Livro
+4. Excluir Livro
+0. Sair
+```
