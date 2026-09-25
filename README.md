@@ -30,10 +30,10 @@ PythonDjangoODBC/
 1. Certifique-se de que possui o arquivo `.env` na raiz do projeto com as credenciais do seu banco de dados:
 
 ```env
-DB_DRIVER=PostgreSQL Unicode(x64)
-DB_SERVER=altaria.proxy.rlwy.net
-DB_PORT=28633
-DB_DATABASE=railway
+DB_DRIVER=driver
+DB_SERVER=server
+DB_PORT=porta
+DB_DATABASE=nome_da_base
 DB_USER=postgres
 DB_PASSWORD=sua_senha
 ```
