@@ -19,31 +19,31 @@ def aplicar_scripts():
     conn_str = f"DRIVER={{{driver}}};SERVER={server};PORT={port};DATABASE={database};UID={user};PWD={password};"
     
     print("=" * 70)
-    print("🚀 EXECUÇÃO DE CONSOLIDAÇÃO DO BANCO DE DADOS (DOCENTE / ACADÊMICO)")
+    print("EXECUÇÃO DE CONSOLIDAÇÃO DO BANCO DE DADOS (DOCENTE / ACADÊMICO)")
     print("=" * 70)
-    print(f"📌 SGBD: PostgreSQL | Banco: '{database}' | Servidor: '{server}:{port}'")
+    print(f"SGBD: PostgreSQL | Banco: '{database}' | Servidor: '{server}:{port}'")
 
     script_banco = os.path.join("atividade_1_banco", "banco_biblioteca.sql")
     script_views = os.path.join("atividade_2_views", "04_views.sql")
     
     if not os.path.exists(script_banco) or not os.path.exists(script_views):
-        print("❌ Arquivos SQL não encontrados em atividade_1_banco ou atividade_2_views.")
+        print("Erro: Arquivos SQL não encontrados em atividade_1_banco ou atividade_2_views.")
         return
 
     try:
         conn = pyodbc.connect(conn_str)
         cursor = conn.cursor()
 
-        print("\n📖 Lendo e aplicando o script da Atividade 1 (Banco de Dados)...")
+        print("\nLendo e aplicando o script da Atividade 1 (Banco de Dados)...")
         with open(script_banco, "r", encoding="utf-8") as f:
             cursor.execute(f.read())
 
-        print("⚡ Aplicando o script da Atividade 2 (10 Views + 10 Materialized Views)...")
+        print("Aplicando o script da Atividade 2 (10 Views + 10 Materialized Views)...")
         with open(script_views, "r", encoding="utf-8") as f:
             cursor.execute(f.read())
 
         conn.commit()
-        print("✅ Banco de dados e Visões consolidados com SUCESSO!\n")
+        print("Banco de dados e Visões consolidados com SUCESSO!\n")
 
         # Verificação das Visões Criadas
         views = [
@@ -73,7 +73,7 @@ def aplicar_scripts():
         ]
 
         print("-" * 70)
-        print("📋 VERIFICAÇÃO DAS 10 VISÕES TRADICIONAIS (VIEWS)")
+        print("VERIFICAÇÃO DAS 10 VISÕES TRADICIONAIS (VIEWS)")
         print("-" * 70)
         for v in views:
             cursor.execute(f"SELECT COUNT(*) FROM {v}")
@@ -81,7 +81,7 @@ def aplicar_scripts():
             print(f"  • {v:<35}: {cnt} registros retornados")
 
         print("\n" + "-" * 70)
-        print("⚡ VERIFICAÇÃO DAS 10 VISÕES MATERIALIZADAS (MATERIALIZED VIEWS)")
+        print("VERIFICAÇÃO DAS 10 VISÕES MATERIALIZADAS (MATERIALIZED VIEWS)")
         print("-" * 70)
         for mv in mviews:
             cursor.execute(f"SELECT COUNT(*) FROM {mv}")
@@ -90,11 +90,11 @@ def aplicar_scripts():
 
         conn.close()
         print("\n" + "=" * 70)
-        print("🎉 CONSOLIDAÇÃO E VERIFICAÇÃO CONCLUÍDAS COM SUCESSO!")
+        print("CONSOLIDAÇÃO E VERIFICAÇÃO CONCLUÍDAS COM SUCESSO!")
         print("=" * 70)
 
     except Exception as e:
-        print(f"\n❌ Erro ao consolidar banco de dados: {e}")
+        print(f"\nErro ao consolidar banco de dados: {e}")
 
 if __name__ == "__main__":
     aplicar_scripts()

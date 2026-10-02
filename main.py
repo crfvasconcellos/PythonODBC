@@ -53,9 +53,9 @@ def cadastrar_livro(titulo, autor, ano, preco):
         cursor.execute(sql, (titulo, autor, ano, preco))
         conn.commit()
         conn.close()
-        print("\n✅ Livro cadastrado com sucesso!")
+        print("\nLivro cadastrado com sucesso!")
     except Exception as e:
-        print(f"\n❌ Erro ao cadastrar livro: {e}")
+        print(f"\nErro ao cadastrar livro: {e}")
 
 
 def listar_livros():
@@ -81,7 +81,7 @@ def listar_livros():
         print("=" * 60)
         return rows
     except Exception as e:
-        print(f"\n❌ Erro ao listar livros: {e}")
+        print(f"\nErro ao listar livros: {e}")
         return []
 
 
@@ -97,11 +97,11 @@ def atualizar_livro(livro_id, titulo, autor, ano, preco):
         conn.close()
 
         if linhas_afetadas > 0:
-            print(f"\n✅ Livro ID {livro_id} atualizado com sucesso!")
+            print(f"\nLivro ID {livro_id} atualizado com sucesso!")
         else:
-            print(f"\n⚠️ Nenhum livro encontrado com o ID {livro_id}.")
+            print(f"\nNenhum livro encontrado com o ID {livro_id}.")
     except Exception as e:
-        print(f"\n❌ Erro ao atualizar livro: {e}")
+        print(f"\nErro ao atualizar livro: {e}")
 
 
 def excluir_livro(livro_id):
@@ -116,11 +116,11 @@ def excluir_livro(livro_id):
         conn.close()
 
         if linhas_afetadas > 0:
-            print(f"\n✅ Livro ID {livro_id} excluído com sucesso!")
+            print(f"\nLivro ID {livro_id} excluído com sucesso!")
         else:
-            print(f"\n⚠️ Nenhum livro encontrado com o ID {livro_id}.")
+            print(f"\nNenhum livro encontrado com o ID {livro_id}.")
     except Exception as e:
-        print(f"\n❌ Erro ao excluir livro: {e}")
+        print(f"\nErro ao excluir livro: {e}")
 
 
 # ==========================================
@@ -153,7 +153,7 @@ def menu():
                 preco = float(input("Preço (R$): "))
                 cadastrar_livro(titulo, autor, ano, preco)
             except ValueError:
-                print("❌ Ano ou preço inválidos. Digite valores numéricos.")
+                print("Ano ou preço inválidos. Digite valores numéricos.")
 
         elif opcao == "3":
             print("\n--- ATUALIZAR LIVRO ---")
@@ -165,7 +165,7 @@ def menu():
                 preco = float(input("Novo Preço (R$): "))
                 atualizar_livro(livro_id, titulo, autor, ano, preco)
             except ValueError:
-                print("❌ ID, Ano ou Preço inválidos. Use apenas números.")
+                print("ID, Ano ou Preço inválidos. Use apenas números.")
 
         elif opcao == "4":
             print("\n--- EXCLUIR LIVRO ---")
@@ -173,14 +173,14 @@ def menu():
                 livro_id = int(input("ID do livro que deseja excluir: "))
                 excluir_livro(livro_id)
             except ValueError:
-                print("❌ Digite um ID numérico válido.")
+                print("Digite um ID numérico válido.")
 
         elif opcao == "0":
             print("\nEncerrando o programa. Até logo!")
             break
 
         else:
-            print("\n❌ Opção inválida, tente novamente.")
+            print("\nOpção inválida, tente novamente.")
 
 
 if __name__ == "__main__":
