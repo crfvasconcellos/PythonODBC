@@ -15,7 +15,9 @@ def conectar_bd():
     password = os.getenv("DB_PASSWORD", "")
 
     conn_str = f"DRIVER={{{driver}}};SERVER={server};PORT={port};DATABASE={database};UID={user};PWD={password};"
-    return pyodbc.connect(conn_str)
+    conn = pyodbc.connect(conn_str)
+    conn.autocommit = False  # já é False por padrão no pyodbc, mas deixo explícito aqui
+    return conn
 
 
 def criar_tabela():
@@ -30,11 +32,11 @@ def criar_tabela():
     );
     """
     try:
-        conn = conectar_bd()
-        cursor = conn.cursor()
-        cursor.execute(sql)
-        conn.commit()
-        conn.close()
+        # with fecha a conexão e o cursor sozinho, mesmo se der erro no meio
+        with conectar_bd() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(sql)
+            conn.commit()
         print("-> Tabela 'livros' verificada/criada com sucesso.")
     except Exception as e:
         print(f"Erro ao criar tabela: {e}")
@@ -47,26 +49,31 @@ def criar_tabela():
 def cadastrar_livro(titulo, autor, ano, preco):
     """CREATE: Insere um novo livro no banco de dados."""
     sql = "INSERT INTO livros (titulo, autor, ano, preco) VALUES (?, ?, ?, ?)"
+    conn = conectar_bd()
     try:
-        conn = conectar_bd()
-        cursor = conn.cursor()
-        cursor.execute(sql, (titulo, autor, ano, preco))
+        with conn.cursor() as cursor:
+            cursor.execute(sql, (titulo, autor, ano, preco))
         conn.commit()
-        conn.close()
         print("\nLivro cadastrado com sucesso!")
     except Exception as e:
+        conn.rollback()  # desfaz a transação se algo falhar no meio
         print(f"\nErro ao cadastrar livro: {e}")
+    finally:
+        conn.close()
 
 
 def listar_livros():
     """READ: Consulta e exibe todos os livros cadastrados."""
     sql = "SELECT id, titulo, autor, ano, preco FROM livros ORDER BY id DESC"
+    conn = conectar_bd()
     try:
-        conn = conectar_bd()
-        cursor = conn.cursor()
-        cursor.execute(sql)
-        rows = cursor.fetchall()
-        conn.close()
+        with conn.cursor() as cursor:
+            cursor.execute(sql)
+            # cursor.description traz nome/tipo de cada coluna retornada
+            print("\nMetadados das colunas retornadas:")
+            for coluna in cursor.description:
+                print(f"  - {coluna[0]}: {coluna[1]}")
+            rows = cursor.fetchall()
 
         if not rows:
             print("\nNenhum livro encontrado.")
@@ -83,44 +90,85 @@ def listar_livros():
     except Exception as e:
         print(f"\nErro ao listar livros: {e}")
         return []
+    finally:
+        conn.close()
 
 
 def atualizar_livro(livro_id, titulo, autor, ano, preco):
     """UPDATE: Atualiza as informações de um livro existente pelo ID."""
     sql = "UPDATE livros SET titulo = ?, autor = ?, ano = ?, preco = ? WHERE id = ?"
+    conn = conectar_bd()
     try:
-        conn = conectar_bd()
-        cursor = conn.cursor()
-        cursor.execute(sql, (titulo, autor, ano, preco, livro_id))
+        with conn.cursor() as cursor:
+            cursor.execute(sql, (titulo, autor, ano, preco, livro_id))
+            linhas_afetadas = cursor.rowcount
         conn.commit()
-        linhas_afetadas = cursor.rowcount
-        conn.close()
 
         if linhas_afetadas > 0:
             print(f"\nLivro ID {livro_id} atualizado com sucesso!")
         else:
             print(f"\nNenhum livro encontrado com o ID {livro_id}.")
     except Exception as e:
+        conn.rollback()
         print(f"\nErro ao atualizar livro: {e}")
+    finally:
+        conn.close()
 
 
 def excluir_livro(livro_id):
     """DELETE: Remove um livro do banco de dados pelo ID."""
     sql = "DELETE FROM livros WHERE id = ?"
+    conn = conectar_bd()
     try:
-        conn = conectar_bd()
-        cursor = conn.cursor()
-        cursor.execute(sql, (livro_id,))
+        with conn.cursor() as cursor:
+            cursor.execute(sql, (livro_id,))
+            linhas_afetadas = cursor.rowcount
         conn.commit()
-        linhas_afetadas = cursor.rowcount
-        conn.close()
 
         if linhas_afetadas > 0:
             print(f"\nLivro ID {livro_id} excluído com sucesso!")
         else:
             print(f"\nNenhum livro encontrado com o ID {livro_id}.")
     except Exception as e:
+        conn.rollback()
         print(f"\nErro ao excluir livro: {e}")
+    finally:
+        conn.close()
+
+
+# ==========================================
+# FUNCTION E PROCEDURE DO BANCO (ver 05_funcoes_cap5.sql)
+# ==========================================
+
+def consultar_total_por_autor(autor):
+    """Consulta quantos livros de um autor existem, chamando a function do banco."""
+    sql = "SELECT * FROM fn_contar_livros_por_autor(?)"
+    conn = conectar_bd()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(sql, (autor,))
+            total = cursor.fetchone()[0]
+        print(f"\nO autor '{autor}' tem {total} livro(s) cadastrado(s).")
+    except Exception as e:
+        print(f"\nErro ao consultar função: {e}")
+    finally:
+        conn.close()
+
+
+def cadastrar_livro_via_procedure(titulo, autor, ano, preco):
+    """Cadastra um livro chamando a procedure do banco em vez de fazer o INSERT aqui."""
+    sql = "CALL sp_cadastrar_livro(?, ?, ?, ?)"
+    conn = conectar_bd()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(sql, (titulo, autor, ano, preco))
+        conn.commit()
+        print("\nLivro cadastrado com sucesso via PROCEDURE!")
+    except Exception as e:
+        conn.rollback()
+        print(f"\nErro ao cadastrar via procedure: {e}")
+    finally:
+        conn.close()
 
 
 # ==========================================
@@ -137,6 +185,8 @@ def menu():
         print("2. Cadastrar Novo Livro")
         print("3. Atualizar Livro")
         print("4. Excluir Livro")
+        print("5. Consultar total de livros por autor (FUNCTION)")
+        print("6. Cadastrar livro via PROCEDURE")
         print("0. Sair")
 
         opcao = input("\nEscolha uma opção: ").strip()
@@ -174,6 +224,22 @@ def menu():
                 excluir_livro(livro_id)
             except ValueError:
                 print("Digite um ID numérico válido.")
+
+        elif opcao == "5":
+            print("\n--- CONSULTAR TOTAL POR AUTOR ---")
+            autor = input("Nome do autor: ").strip()
+            consultar_total_por_autor(autor)
+
+        elif opcao == "6":
+            print("\n--- CADASTRAR LIVRO VIA PROCEDURE ---")
+            titulo = input("Título: ").strip()
+            autor = input("Autor: ").strip()
+            try:
+                ano = int(input("Ano de publicação: "))
+                preco = float(input("Preço (R$): "))
+                cadastrar_livro_via_procedure(titulo, autor, ano, preco)
+            except ValueError:
+                print("Ano ou preço inválidos. Digite valores numéricos.")
 
         elif opcao == "0":
             print("\nEncerrando o programa. Até logo!")
