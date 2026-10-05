@@ -170,6 +170,149 @@ def cadastrar_livro_via_procedure(titulo, autor, ano, preco):
     finally:
         conn.close()
 
+def relatorio_estatisticas_genero(media_minima):
+    """(Cap. 3: AVG, MIN, MAX, HAVING, GROUP BY)"""
+    sql = """
+        SELECT genero, 
+               AVG(numero_de_exemplares) AS media_exemplares,
+               MIN(numero_de_exemplares) AS minimo_exemplares,
+               MAX(numero_de_exemplares) AS maximo_exemplares
+        FROM livros
+        WHERE genero IS NOT NULL
+        GROUP BY genero
+        HAVING AVG(numero_de_exemplares) > ?;
+    """
+    conn = conectar_bd()
+    conn.autocommit = False
+    
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(sql, (media_minima,))
+            
+            if cursor.description:
+                colunas = [col[0].upper() for col in cursor.description]
+                print("\n" + "=" * 80)
+                print(f"| {colunas[0]:<25} | {colunas[1]:<15} | {colunas[2]:<10} | {colunas[3]:<10} |")
+                print("-" * 80)
+                
+            rows = cursor.fetchall()
+            if not rows:
+                print("Nenhum dado encontrado para este filtro.")
+                return
+
+            for row in rows:
+                print(f"| {str(row[0]):<25} | {float(row[1]):<15.2f} | {int(row[2]):<10} | {int(row[3]):<10} |")
+            print("=" * 80)
+            
+    except Exception as e:
+        conn.rollback()
+        print(f"\nErro ao gerar estatísticas por gênero: {e}")
+    finally:
+        conn.close()
+
+
+
+def buscar_catalogo_palavra_chave(termo):
+    """(Cap. 3: LIKE, UPPER, LOWER, LENGTH, SUBSTRING, ||, ESCAPE, ORDER BY)"""
+    busca_like = f"%{termo}%"
+    sql = """
+        SELECT UPPER(nome) AS titulo_destaque,
+               nome || ' (Autor: ' || autor || ')' AS catalogo_completo,
+               SUBSTRING(genero FROM 1 FOR 15) AS genero_curto,
+               LENGTH(nome) as tamanho_titulo
+        FROM livros
+        WHERE nome LIKE ? OR autor LIKE ?
+        ORDER BY autor ASC, numero_de_exemplares DESC;
+    """
+    conn = conectar_bd()
+    conn.autocommit = False
+    
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(sql, (busca_like, busca_like))
+            rows = cursor.fetchall()
+            
+            print("\n" + "=" * 90)
+            print(f"| {'TÍTULO DESTAQUE':<25} | {'CATÁLOGO COMPLETO':<40} | {'GÊNERO':<15} |")
+            print("-" * 90)
+            
+            if not rows:
+                print("| Nenhuma obra encontrada com esse termo. ".ljust(89) + "|")
+            
+            for row in rows:
+                print(f"| {str(row[0])[:25]:<25} | {str(row[1])[:40]:<40} | {str(row[2]):<15} |")
+            print("=" * 90)
+            
+    except Exception as e:
+        conn.rollback()
+        print(f"\nErro ao buscar no catálogo: {e}")
+    finally:
+        conn.close()
+
+
+
+def auditoria_estantes_vazias():
+    """(Cap. 3: EXCEPT / Operações de Conjunto)"""
+    sql = """
+        SELECT id_estante, dominio_lado_1 FROM estantes
+        EXCEPT
+        SELECT e.id_estante, e.dominio_lado_1
+        FROM estantes e
+        INNER JOIN livros l ON e.id_estante = l.id_estante;
+    """
+    conn = conectar_bd()
+    conn.autocommit = False
+    
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(sql)
+            rows = cursor.fetchall()
+            
+            if not rows:
+                print("Resultado: Todas as estantes possuem pelo menos um livro associado!")
+            else:
+                for row in rows:
+                    print(f"ID Estante: {row[0]:<5} | Domínio: {row[1]}")
+                    
+    except Exception as e:
+        conn.rollback()
+        print(f"\nErro ao realizar auditoria: {e}")
+    finally:
+        conn.close()
+
+
+def analise_acervo_critico(genero_alvo, genero_comparacao):
+    """(Cap. 3: WITH/CTE, EXISTS, IN, SOME/ALL, Subconsulta no FROM)"""
+    sql = """
+        WITH Estantes_Alvo AS (
+            SELECT id_estante FROM estantes WHERE dominio_lado_1 = ?
+        )
+        SELECT sub.nome, sub.numero_de_exemplares
+        FROM (SELECT id_livro, nome, numero_de_exemplares, id_estante, genero FROM livros) AS sub
+        WHERE sub.id_estante IN (SELECT id_estante FROM Estantes_Alvo)
+          AND sub.numero_de_exemplares > SOME (SELECT numero_de_exemplares FROM livros WHERE genero = ?)
+          AND EXISTS (SELECT 1 FROM estantes e WHERE e.id_estante = sub.id_estante);
+    """
+    conn = conectar_bd()
+    conn.autocommit = False
+    
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(sql, (genero_alvo, genero_comparacao))
+            rows = cursor.fetchall()
+            
+            if not rows:
+                print("Nenhum livro crítico encontrado nestes parâmetros.")
+            else:
+                for row in rows:
+                    print(f"Obra: {row[0]:<30} | Exemplares: {row[1]}")
+                    
+    except Exception as e:
+        conn.rollback()
+        print(f"\nErro ao processar análise crítica: {e}")
+    finally:
+        conn.close()
+
 
 # ==========================================
 # MENU INTERATIVO NO TERMINAL
@@ -187,6 +330,10 @@ def menu():
         print("4. Excluir Livro")
         print("5. Consultar total de livros por autor (FUNCTION)")
         print("6. Cadastrar livro via PROCEDURE")
+        print("7. Relatório Gerencial: Estatísticas por Gênero")
+        print("8. Buscar no Catálogo Completo (Palavra-chave)")
+        print("9. Auditoria: Listar Estantes Vazias")
+        print("10. Análise de Acervo Crítico")
         print("0. Sair")
 
         opcao = input("\nEscolha uma opção: ").strip()
@@ -241,6 +388,31 @@ def menu():
             except ValueError:
                 print("Ano ou preço inválidos. Digite valores numéricos.")
 
+        elif opcao == "7":
+            print("\n--- RELATÓRIO: ESTATÍSTICAS POR GÊNERO ---")
+            try:
+                media_min = float(input("Filtrar gêneros com média de exemplares maior que: "))
+                relatorio_estatisticas_genero(media_min)
+            except ValueError:
+                print("Valor inválido. Digite um número.")
+
+        elif opcao == "8":
+            print("\n--- BUSCA NO CATÁLOGO COMPLETO ---")
+            termo = input("Digite a palavra-chave (título ou autor): ").strip()
+            buscar_catalogo_palavra_chave(termo)
+
+        elif opcao == "9":
+            print("\n--- AUDITORIA: ESTANTES VAZIAS (SEM LIVROS) ---")
+            print("Iniciando varredura no acervo...")
+            auditoria_estantes_vazias()
+
+        elif opcao == "10":
+            print("\n--- ANÁLISE DE ACERVO CRÍTICO ---")
+            print("Dica: Compara se as obras de um gênero superam os exemplares de outro.")
+            gen_alvo = input("Gênero alvo da análise (ex: Ficção Científica): ").strip()
+            gen_comp = input("Gênero para comparar (ex: Romance Clássico): ").strip()
+            analise_acervo_critico(gen_alvo, gen_comp)
+            
         elif opcao == "0":
             print("\nEncerrando o programa. Até logo!")
             break
