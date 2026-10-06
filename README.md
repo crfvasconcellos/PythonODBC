@@ -40,8 +40,12 @@ PythonDjangoODBC/
 │   ├── 03_insercoes.sql       # Povoamento de dados de exemplo
 │   └── banco_biblioteca.sql   # Script consolidado da Atividade 1
 │
-└── atividade_2_views/          # (Views + Materialized Views)
-    └── 04_views.sql           # 10 Visões Tradicionais + 10 Visões Materializadas
+├── atividade_2_views/         # (Views + Materialized Views)
+│   └── 04_views.sql           # 10 Visões Tradicionais + 10 Visões Materializadas
+│
+└── atividade_3_Join           # (Joins necessárias para o projeto)
+    └──Atividade_3_Join        # implementação de NATURAL JOIN,INNER JOIN, LEFT OUTER JOIN, RIGHT OUTER JOIN, FULL OUTER JOIN.
+
 ```
 
 ---
