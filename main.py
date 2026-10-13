@@ -522,6 +522,3 @@ if __name__ == "__main__":
         else:
             print("\nOpção inválida, tente novamente.")
 
-
-if __name__ == "__main__":
-    menu()
