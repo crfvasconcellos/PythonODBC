@@ -59,6 +59,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- O Trigger que fica à escuta na tabela de livros
+DROP TRIGGER IF EXISTS trg_auditoria_exclusao ON biblioteca.livros;
 CREATE TRIGGER trg_auditoria_exclusao
 AFTER DELETE ON biblioteca.livros
 FOR EACH ROW

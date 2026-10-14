@@ -256,7 +256,7 @@ def _fetch_as_dicts(cursor):
     return [dict(zip(colunas, row)) for row in cursor.fetchall()]
 
 
-def _executar_consulta(sql):
+def _executar_consulta(sql, params=None):
     """Executa um SELECT do schema 'biblioteca' e devolve a lista de dicionários.
 
     Devolve None se não for possível executar (banco fora do ar, tabelas do
@@ -275,10 +275,12 @@ def _executar_consulta(sql):
             if cursor.fetchone()[0] < 3:
                 print("\nAs tabelas do schema 'biblioteca' (livros, estantes, espacos) "
                       "não foram encontradas neste banco.")
-                print("Monte o banco da Atividade 1 antes (banco_biblioteca.sql ou "
-                      "aplicar_scripts_docente.py).")
+                print("Execute primeiro 'python aplicar_scripts_docente.py' para inicializar a base da biblioteca.")
                 return None
-            cursor.execute(sql)
+            if params:
+                cursor.execute(sql, params)
+            else:
+                cursor.execute(sql)
             return _fetch_as_dicts(cursor)
     except Exception as e:
         print(f"\nErro ao executar a consulta: {e}")
@@ -444,7 +446,7 @@ def relatorio_estatisticas_genero(media_minima):
                AVG(numero_de_exemplares) AS media_exemplares,
                MIN(numero_de_exemplares) AS minimo_exemplares,
                MAX(numero_de_exemplares) AS maximo_exemplares
-        FROM livros
+        FROM biblioteca.livros
         WHERE genero IS NOT NULL
         GROUP BY genero
         HAVING AVG(numero_de_exemplares) > ?;
@@ -487,8 +489,8 @@ def buscar_catalogo_palavra_chave(termo):
                nome || ' (Autor: ' || autor || ')' AS catalogo_completo,
                SUBSTRING(genero FROM 1 FOR 15) AS genero_curto,
                LENGTH(nome) as tamanho_titulo
-        FROM livros
-        WHERE nome LIKE ? OR autor LIKE ?
+        FROM biblioteca.livros
+        WHERE nome ILIKE ? OR autor ILIKE ?
         ORDER BY autor ASC, numero_de_exemplares DESC;
     """
     conn = conectar_bd()
@@ -521,11 +523,11 @@ def buscar_catalogo_palavra_chave(termo):
 def auditoria_estantes_vazias():
     """(Cap. 3: EXCEPT / Operações de Conjunto)"""
     sql = """
-        SELECT id_estante, dominio_lado_1 FROM estantes
+        SELECT id_estante, dominio_lado_1 FROM biblioteca.estantes
         EXCEPT
         SELECT e.id_estante, e.dominio_lado_1
-        FROM estantes e
-        INNER JOIN livros l ON e.id_estante = l.id_estante;
+        FROM biblioteca.estantes e
+        INNER JOIN biblioteca.livros l ON e.id_estante = l.id_estante;
     """
     conn = conectar_bd()
     conn.autocommit = False
@@ -552,13 +554,13 @@ def analise_acervo_critico(genero_alvo, genero_comparacao):
     """(Cap. 3: WITH/CTE, EXISTS, IN, SOME/ALL, Subconsulta no FROM)"""
     sql = """
         WITH Estantes_Alvo AS (
-            SELECT id_estante FROM estantes WHERE dominio_lado_1 = ?
+            SELECT id_estante FROM biblioteca.estantes WHERE dominio_lado_1 = ?
         )
         SELECT sub.nome, sub.numero_de_exemplares
-        FROM (SELECT id_livro, nome, numero_de_exemplares, id_estante, genero FROM livros) AS sub
+        FROM (SELECT id_livro, nome, numero_de_exemplares, id_estante, genero FROM biblioteca.livros) AS sub
         WHERE sub.id_estante IN (SELECT id_estante FROM Estantes_Alvo)
-          AND sub.numero_de_exemplares > SOME (SELECT numero_de_exemplares FROM livros WHERE genero = ?)
-          AND EXISTS (SELECT 1 FROM estantes e WHERE e.id_estante = sub.id_estante);
+          AND sub.numero_de_exemplares > SOME (SELECT numero_de_exemplares FROM biblioteca.livros WHERE genero = ?)
+          AND EXISTS (SELECT 1 FROM biblioteca.estantes e WHERE e.id_estante = sub.id_estante);
     """
     conn = conectar_bd()
     conn.autocommit = False
@@ -592,7 +594,7 @@ def listar_autores_unicos():
     rows = _executar_consulta(sql)
     if rows:
         for row in rows:
-            print(f"- {row[0]}")
+            print(f"- {row.get('autor')}")
     else:
         print("Nenhum autor encontrado.")
 
@@ -611,7 +613,7 @@ def buscar_livros_por_faixa_exemplares(minimo, maximo):
         print(f"| {'Título':<35} | {'Autor':<20} | {'Exemplares':<10} |")
         print("-" * 75)
         for row in rows:
-            print(f"| {str(row[0])[:35]:<35} | {str(row[1])[:20]:<20} | {int(row[2]):<10} |")
+            print(f"| {str(row.get('nome', ''))[:35]:<35} | {str(row.get('autor', ''))[:20]:<20} | {int(row.get('numero_de_exemplares', 0)):<10} |")
     else:
         print("Nenhum livro encontrado nesta faixa de exemplares.")
 
@@ -627,7 +629,7 @@ def relatorio_autores_multigenero(genero1, genero2):
     rows = _executar_consulta(sql, (genero1, genero2))
     if rows:
         for row in rows:
-            print(f"- {row[0]}")
+            print(f"- {row.get('autor')}")
     else:
         print(f"Nenhum autor transita entre os gêneros {genero1} e {genero2}.")
 
@@ -738,11 +740,11 @@ def menu():
             gen_comp = input("Gênero para comparar (ex: Romance Clássico): ").strip()
             analise_acervo_critico(gen_alvo, gen_comp)
 
-        elif opcao == '10':
+        elif opcao == "12":
             listar_autores_unicos()
 
-        elif opcao == '11':
-            print("\n--- Filtro de Exemplares ---")
+        elif opcao == "13":
+            print("\n--- Filtro de Exemplares (BETWEEN) ---")
             try:
                 minimo = int(input("Digite a quantidade MÍNIMA de exemplares: "))
                 maximo = int(input("Digite a quantidade MÁXIMA de exemplares: "))
@@ -755,8 +757,8 @@ def menu():
             except ValueError:
                 print("Erro: Entrada inválida. Por favor, digite apenas números inteiros.")
 
-        elif opcao == '12':
-            print("\n--- Busca de Autores Versáteis ---")
+        elif opcao == "14":
+            print("\n--- Busca de Autores Versáteis (INTERSECT) ---")
             genero1 = input("Digite o 1º Gênero (ex: Ficção, Romance, etc.): ").strip()
             genero2 = input("Digite o 2º Gênero (ex: Ficção, Romance, etc.): ").strip()
             

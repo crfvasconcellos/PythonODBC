@@ -30,22 +30,17 @@ O trabalho contempla:
 ```text
 PythonDjangoODBC/
 ├── .env                       # Configurações de conexão do banco de dados
-├── main.py                    # Script de CRUD interativo em Python via ODBC
+├── main.py                    # Script de CRUD interativo e consultas em Python via ODBC
 ├── aplicar_scripts_docente.py  # Script de execução e verificação automatizada
 ├── README.md                  # Documentação completa do projeto
 │
-├── atividade_1_banco/          # (Construção e Carga do Banco de Dados)
-│   ├── 01_criacao_banco.sql   # Criação do esquema biblioteca
-│   ├── 02_criacao_tabelas.sql # Criação das 12 tabelas com restrições
-│   ├── 03_insercoes.sql       # Povoamento de dados de exemplo
-│   └── banco_biblioteca.sql   # Script consolidado da Atividade 1
-│
-├── atividade_2_views/         # (Views + Materialized Views)
-│   └── 04_views.sql           # 10 Visões Tradicionais + 10 Visões Materializadas
-│
-└── atividade_3_Join           # (Joins necessárias para o projeto)
-    └──Atividade_3_Join        # implementação de NATURAL JOIN,INNER JOIN, LEFT OUTER JOIN, RIGHT OUTER JOIN, FULL OUTER JOIN.
-
+└── sql/                       # Todos os scripts SQL do projeto organizados em ordem
+    ├── 01_criacao_banco.sql   # Criação do esquema 'biblioteca'
+    ├── 02_criacao_tabelas.sql # Criação das tabelas com restrições e auditoria
+    ├── 03_insercoes.sql       # Povoamento e carga de dados de exemplo
+    ├── 04_views.sql           # 10 Visões Tradicionais + 10 Visões Materializadas
+    ├── 05_funcoes_cap5.sql    # Functions, Procedures e Triggers (Capítulo 5)
+    └── 06_consultas_cap3.sql  # DDL/DML Avançadas, CTEs, Subconsultas e Operadores (Capítulo 3)
 ```
 
 ---
@@ -75,13 +70,13 @@ pip install pyodbc python-dotenv
 
 ### Opção 1: Execução Automatizada via Python (Docente / Acadêmico)
 
-Para consolidar o banco de dados, aplicar todas as visões e executar a verificação automática de contagem:
+Para consolidar o banco de dados, aplicar todos os scripts SQL sequenciais (`01` a `06`) e validar as visões automaticamente:
 
 ```bash
 python aplicar_scripts_docente.py
 ```
 
-Para interagir com o menu CRUD de livros no terminal:
+Para interagir com o menu CRUD de livros e consultas no terminal:
 
 ```bash
 python main.py
@@ -89,16 +84,16 @@ python main.py
 
 ### Opção 2: Execução via Cliente SQL (psql, DBeaver, pgAdmin)
 
-1. Execute primeiro os scripts da **Atividade 1**:
-   ```bash
-   psql -U postgres -d biblioteca -f atividade_1_banco/banco_biblioteca.sql
-   ```
-   *(ou execute individualmente `01_criacao_banco.sql` → `02_criacao_tabelas.sql` → `03_insercoes.sql`)*
+Execute em ordem os scripts da pasta `sql/`:
 
-2. Em seguida, execute o script da **Atividade 2**:
-   ```bash
-   psql -U postgres -d biblioteca -f atividade_2_views/04_views.sql
-   ```
+```bash
+psql -U postgres -d biblioteca -f sql/01_criacao_banco.sql
+psql -U postgres -d biblioteca -f sql/02_criacao_tabelas.sql
+psql -U postgres -d biblioteca -f sql/03_insercoes.sql
+psql -U postgres -d biblioteca -f sql/04_views.sql
+psql -U postgres -d biblioteca -f sql/05_funcoes_cap5.sql
+psql -U postgres -d biblioteca -f sql/06_consultas_cap3.sql
+```
 
 ---
 

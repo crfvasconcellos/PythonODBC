@@ -23,27 +23,35 @@ def aplicar_scripts():
     print("=" * 70)
     print(f"SGBD: PostgreSQL | Banco: '{database}' | Servidor: '{server}:{port}'")
 
-    script_banco = os.path.join("atividade_1_banco", "banco_biblioteca.sql")
-    script_views = os.path.join("atividade_2_views", "04_views.sql")
+    scripts = [
+        ("01_criacao_banco.sql", "Criação do Schema 'biblioteca'"),
+        ("02_criacao_tabelas.sql", "Criação das Tabelas e Constraints"),
+        ("03_insercoes.sql", "Carga Inicial dos Dados de Exemplo"),
+        ("04_views.sql", "10 Views Tradicionais + 10 Views Materializadas"),
+        ("05_funcoes_cap5.sql", "Functions, Procedures e Gatilho de Auditoria"),
+        ("06_consultas_cap3.sql", "DDL/DML Avançadas e Visões do Capítulo 3"),
+    ]
     
-    if not os.path.exists(script_banco) or not os.path.exists(script_views):
-        print("Erro: Arquivos SQL não encontrados em atividade_1_banco ou atividade_2_views.")
-        return
+    sql_dir = "sql"
+    for arquivo, _ in scripts:
+        caminho = os.path.join(sql_dir, arquivo)
+        if not os.path.exists(caminho):
+            print(f"Erro: Arquivo SQL '{caminho}' não encontrado.")
+            return
 
     try:
         conn = pyodbc.connect(conn_str)
         cursor = conn.cursor()
 
-        print("\nLendo e aplicando o script da Atividade 1 (Banco de Dados)...")
-        with open(script_banco, "r", encoding="utf-8") as f:
-            cursor.execute(f.read())
+        print("\nAplicando scripts SQL em ordem sequencial:")
+        for arquivo, descricao in scripts:
+            caminho = os.path.join(sql_dir, arquivo)
+            print(f"  -> Executando {arquivo:<25} ({descricao})...")
+            with open(caminho, "r", encoding="utf-8") as f:
+                cursor.execute(f.read())
+            conn.commit()
 
-        print("Aplicando o script da Atividade 2 (10 Views + 10 Materialized Views)...")
-        with open(script_views, "r", encoding="utf-8") as f:
-            cursor.execute(f.read())
-
-        conn.commit()
-        print("Banco de dados e Visões consolidados com SUCESSO!\n")
+        print("\nBanco de dados e Visões consolidados com SUCESSO!\n")
 
         # Verificação das Visões Criadas
         views = [
