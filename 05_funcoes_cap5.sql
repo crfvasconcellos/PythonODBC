@@ -41,3 +41,25 @@ END;
 $$;
 
 -- uso: CALL sp_cadastrar_livro('O Alienista', 'Machado de Assis', 1882, 29.90);
+
+
+
+-- Função que será disparada pelo Gatilho
+CREATE OR REPLACE FUNCTION biblioteca.fn_auditar_exclusao_livro()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Copia os dados da linha que está a ser apagada (OLD) para a tabela de auditoria
+    INSERT INTO biblioteca.auditoria_livros_excluidos 
+        (id_livro_apagado, nome_livro, autor)
+    VALUES 
+        (OLD.id_livro, OLD.nome, OLD.autor);
+        
+    RETURN OLD; -- Permite que a exclusão original continue
+END;
+$$ LANGUAGE plpgsql;
+
+-- O Trigger que fica à escuta na tabela de livros
+CREATE TRIGGER trg_auditoria_exclusao
+AFTER DELETE ON biblioteca.livros
+FOR EACH ROW
+EXECUTE FUNCTION biblioteca.fn_auditar_exclusao_livro();

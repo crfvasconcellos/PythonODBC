@@ -83,9 +83,20 @@ CREATE TABLE estantes (
 CREATE TABLE livros (
     id_livro SERIAL PRIMARY KEY,
     nome VARCHAR(255) NOT NULL,
-    numero_de_exemplares INT,
+    numero_de_exemplares INT CHECK (numero_de_exemplares >= 0),
     pode_ser_emprestado BOOLEAN,
     autor VARCHAR(255),
     genero VARCHAR(100),
     id_estante INT NOT NULL REFERENCES estantes(id_estante) ON DELETE CASCADE
+);
+
+
+-- Tabela para guardar o histórico de livros apagados
+CREATE TABLE biblioteca.auditoria_livros_excluidos (
+    id_auditoria SERIAL PRIMARY KEY,
+    id_livro_apagado INT,
+    nome_livro VARCHAR(255),
+    autor VARCHAR(255),
+    data_exclusao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    usuario_banco VARCHAR(50) DEFAULT CURRENT_USER
 );

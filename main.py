@@ -580,6 +580,56 @@ def analise_acervo_critico(genero_alvo, genero_comparacao):
     finally:
         conn.close()
 
+def listar_autores_unicos():
+    """Demonstração do DISTINCT (Capítulo 3)"""
+    print("\n--- Lista de Autores Únicos (DISTINCT) ---")
+    sql = """
+        SELECT DISTINCT autor 
+        FROM biblioteca.livros 
+        WHERE autor IS NOT NULL
+        ORDER BY autor ASC;
+    """
+    rows = _executar_consulta(sql)
+    if rows:
+        for row in rows:
+            print(f"- {row[0]}")
+    else:
+        print("Nenhum autor encontrado.")
+
+
+def buscar_livros_por_faixa_exemplares(minimo, maximo):
+    """Demonstração do BETWEEN (Capítulo 3)"""
+    print(f"\n--- Livros com exemplares entre {minimo} e {maximo} (BETWEEN) ---")
+    sql = """
+        SELECT nome, autor, numero_de_exemplares
+        FROM biblioteca.livros
+        WHERE numero_de_exemplares BETWEEN ? AND ?
+        ORDER BY numero_de_exemplares DESC;
+    """
+    rows = _executar_consulta(sql, (minimo, maximo))
+    if rows:
+        print(f"| {'Título':<35} | {'Autor':<20} | {'Exemplares':<10} |")
+        print("-" * 75)
+        for row in rows:
+            print(f"| {str(row[0])[:35]:<35} | {str(row[1])[:20]:<20} | {int(row[2]):<10} |")
+    else:
+        print("Nenhum livro encontrado nesta faixa de exemplares.")
+
+
+def relatorio_autores_multigenero(genero1, genero2):
+    """Demonstração do INTERSECT (Capítulo 3)"""
+    print(f"\n--- Autores que escrevem '{genero1}' e também '{genero2}' (INTERSECT) ---")
+    sql = """
+        SELECT autor FROM biblioteca.livros WHERE genero = ?
+        INTERSECT
+        SELECT autor FROM biblioteca.livros WHERE genero = ?;
+    """
+    rows = _executar_consulta(sql, (genero1, genero2))
+    if rows:
+        for row in rows:
+            print(f"- {row[0]}")
+    else:
+        print(f"Nenhum autor transita entre os gêneros {genero1} e {genero2}.")
 
 # ==========================================
 # MENU INTERATIVO NO TERMINAL
@@ -603,6 +653,9 @@ def menu():
         print("9. Buscar no Catálogo Completo (Palavra-chave)")
         print("10. Auditoria: Listar Estantes Vazias")
         print("11. Análise de Acervo Crítico")
+        print("12. Listar Autores Únicos")
+        print("13. Buscar Livros por Faixa de Exemplares")
+        print("14. Relatório de Autores Multigênero")
         print("0. Sair")
 
         opcao = input("\nEscolha uma opção: ").strip()
@@ -684,6 +737,33 @@ def menu():
             gen_alvo = input("Gênero alvo da análise (ex: Ficção Científica): ").strip()
             gen_comp = input("Gênero para comparar (ex: Romance Clássico): ").strip()
             analise_acervo_critico(gen_alvo, gen_comp)
+
+        elif opcao == '10':
+            listar_autores_unicos()
+
+        elif opcao == '11':
+            print("\n--- Filtro de Exemplares ---")
+            try:
+                minimo = int(input("Digite a quantidade MÍNIMA de exemplares: "))
+                maximo = int(input("Digite a quantidade MÁXIMA de exemplares: "))
+                
+                if minimo > maximo:
+                    print("Aviso: O valor mínimo não pode ser maior que o máximo. Invertendo a busca...")
+                    buscar_livros_por_faixa_exemplares(maximo, minimo)
+                else:
+                    buscar_livros_por_faixa_exemplares(minimo, maximo)
+            except ValueError:
+                print("Erro: Entrada inválida. Por favor, digite apenas números inteiros.")
+
+        elif opcao == '12':
+            print("\n--- Busca de Autores Versáteis ---")
+            genero1 = input("Digite o 1º Gênero (ex: Ficção, Romance, etc.): ").strip()
+            genero2 = input("Digite o 2º Gênero (ex: Ficção, Romance, etc.): ").strip()
+            
+            if genero1 and genero2:
+                relatorio_autores_multigenero(genero1, genero2)
+            else:
+                print("Erro: Os gêneros não podem ser vazios.")
 
         elif opcao == "0":
             print("\nEncerrando o programa. Até logo!")

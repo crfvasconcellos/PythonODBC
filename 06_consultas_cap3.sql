@@ -110,6 +110,8 @@ CREATE OR REPLACE VIEW vw_cap3_agregacao_having AS
 SELECT 
     genero, 
     AVG(numero_de_exemplares) AS media_exemplares,
+    SUM(numero_de_exemplares) AS total_livros, 
+    COUNT(id_livro) AS qtd_titulos,          
     MIN(numero_de_exemplares) AS minimo_exemplares,
     MAX(numero_de_exemplares) AS maximo_exemplares
 FROM livros
