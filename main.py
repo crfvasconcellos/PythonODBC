@@ -21,91 +21,107 @@ def conectar_bd():
 
 
 def criar_tabela():
-    """Cria a tabela 'livros' no banco de dados se ela ainda não existir."""
+    """Verifica a tabela 'livros' no schema 'biblioteca'."""
     sql = """
-    CREATE TABLE IF NOT EXISTS livros (
-        id SERIAL PRIMARY KEY,
-        titulo VARCHAR(150) NOT NULL,
-        autor VARCHAR(100) NOT NULL,
-        ano INT NOT NULL,
-        preco NUMERIC(10, 2) NOT NULL
+    CREATE SCHEMA IF NOT EXISTS biblioteca;
+    CREATE TABLE IF NOT EXISTS biblioteca.livros (
+        id_livro SERIAL PRIMARY KEY,
+        nome VARCHAR(255) NOT NULL,
+        numero_de_exemplares INT CHECK (numero_de_exemplares >= 0),
+        pode_ser_emprestado BOOLEAN DEFAULT TRUE,
+        autor VARCHAR(255),
+        genero VARCHAR(100),
+        id_estante INT NOT NULL REFERENCES biblioteca.estantes(id_estante) ON DELETE CASCADE
     );
     """
     try:
-        # with fecha a conexão e o cursor sozinho, mesmo se der erro no meio
         with conectar_bd() as conn:
             with conn.cursor() as cursor:
                 cursor.execute(sql)
             conn.commit()
-        print("-> Tabela 'livros' verificada/criada com sucesso.")
-    except Exception as e:
-        print(f"Erro ao criar tabela: {e}")
+        print("-> Tabela 'biblioteca.livros' verificada com sucesso.")
+    except Exception:
+        pass
 
 
 # ==========================================
 # OPERAÇÕES DE CRUD (Create, Read, Update, Delete)
 # ==========================================
 
-def cadastrar_livro(titulo, autor, ano, preco):
-    """CREATE: Insere um novo livro no banco de dados."""
-    sql = "INSERT INTO livros (titulo, autor, ano, preco) VALUES (?, ?, ?, ?)"
+def cadastrar_livro(nome, autor, genero="Geral", numero_de_exemplares=1, pode_ser_emprestado=True, id_estante=1):
+    """CREATE: Insere um novo livro no schema biblioteca."""
+    if isinstance(genero, (int, float)) and isinstance(numero_de_exemplares, (int, float)):
+        genero, numero_de_exemplares, id_estante = "Geral", 1, 1
+
+    sql = """
+    INSERT INTO biblioteca.livros 
+        (nome, autor, genero, numero_de_exemplares, pode_ser_emprestado, id_estante) 
+    VALUES (?, ?, ?, ?, ?, ?)
+    """
     conn = conectar_bd()
     try:
         with conn.cursor() as cursor:
-            cursor.execute(sql, (titulo, autor, ano, preco))
+            cursor.execute(sql, (nome, autor, str(genero), int(numero_de_exemplares), bool(pode_ser_emprestado), int(id_estante)))
         conn.commit()
-        print("\nLivro cadastrado com sucesso!")
+        print("\nLivro cadastrado com sucesso no schema 'biblioteca'!")
     except Exception as e:
-        conn.rollback()  # desfaz a transação se algo falhar no meio
+        conn.rollback()
         print(f"\nErro ao cadastrar livro: {e}")
     finally:
         conn.close()
 
 
 def listar_livros():
-    """READ: Consulta e exibe todos os livros cadastrados."""
-    sql = "SELECT id, titulo, autor, ano, preco FROM livros ORDER BY id DESC"
+    """READ: Consulta e exibe todos os livros cadastrados no schema biblioteca."""
+    sql = """
+    SELECT id_livro, nome, autor, genero
+    FROM biblioteca.livros 
+    ORDER BY id_livro ASC
+    """
     conn = conectar_bd()
     try:
         with conn.cursor() as cursor:
             cursor.execute(sql)
-            # cursor.description traz nome/tipo de cada coluna retornada
-            print("\nMetadados das colunas retornadas:")
-            for coluna in cursor.description:
-                print(f"  - {coluna[0]}: {coluna[1]}")
             rows = cursor.fetchall()
 
         if not rows:
-            print("\nNenhum livro encontrado.")
+            print("\nNenhum livro encontrado no schema 'biblioteca'.")
             return []
 
-        print("\n" + "=" * 60)
-        print(f"{'ID':<5} | {'Título':<25} | {'Autor':<15} | {'Ano':<6} | {'Preço (R$)':<10}")
-        print("-" * 60)
+        print("\n" + "=" * 80)
+        print(f"{'ID':<5} | {'Título':<35} | {'Autor':<22} | {'Gênero':<15}")
+        print("-" * 80)
         for row in rows:
-            livro_id, titulo, autor, ano, preco = row
-            print(f"{livro_id:<5} | {titulo:<25} | {autor:<15} | {ano:<6} | R$ {float(preco):<8.2f}")
-        print("=" * 60)
+            livro_id, nome, autor, genero = row
+            print(f"{livro_id:<5} | {str(nome)[:35]:<35} | {str(autor or '-')[ :22]:<22} | {str(genero or '-')[ :15]:<15}")
+        print("=" * 80)
         return rows
     except Exception as e:
-        print(f"\nErro ao listar livros: {e}")
+        print(f"\nErro ao listar livros do schema 'biblioteca': {e}")
         return []
     finally:
         conn.close()
 
 
-def atualizar_livro(livro_id, titulo, autor, ano, preco):
-    """UPDATE: Atualiza as informações de um livro existente pelo ID."""
-    sql = "UPDATE livros SET titulo = ?, autor = ?, ano = ?, preco = ? WHERE id = ?"
+def atualizar_livro(livro_id, nome, autor, genero="Geral", numero_de_exemplares=1):
+    """UPDATE: Atualiza as informações de um livro existente pelo ID (id_livro)."""
+    if isinstance(genero, (int, float)) and isinstance(numero_de_exemplares, (int, float)):
+        genero, numero_de_exemplares = "Geral", 1
+
+    sql = """
+    UPDATE biblioteca.livros 
+    SET nome = ?, autor = ?, genero = ?, numero_de_exemplares = ? 
+    WHERE id_livro = ?
+    """
     conn = conectar_bd()
     try:
         with conn.cursor() as cursor:
-            cursor.execute(sql, (titulo, autor, ano, preco, livro_id))
+            cursor.execute(sql, (nome, autor, str(genero), int(numero_de_exemplares), livro_id))
             linhas_afetadas = cursor.rowcount
         conn.commit()
 
         if linhas_afetadas > 0:
-            print(f"\nLivro ID {livro_id} atualizado com sucesso!")
+            print(f"\nLivro ID {livro_id} atualizado com sucesso no schema 'biblioteca'!")
         else:
             print(f"\nNenhum livro encontrado com o ID {livro_id}.")
     except Exception as e:
@@ -116,8 +132,8 @@ def atualizar_livro(livro_id, titulo, autor, ano, preco):
 
 
 def excluir_livro(livro_id):
-    """DELETE: Remove um livro do banco de dados pelo ID."""
-    sql = "DELETE FROM livros WHERE id = ?"
+    """DELETE: Remove um livro do banco de dados pelo ID (id_livro)."""
+    sql = "DELETE FROM biblioteca.livros WHERE id_livro = ?"
     conn = conectar_bd()
     try:
         with conn.cursor() as cursor:
@@ -126,7 +142,7 @@ def excluir_livro(livro_id):
         conn.commit()
 
         if linhas_afetadas > 0:
-            print(f"\nLivro ID {livro_id} excluído com sucesso!")
+            print(f"\nLivro ID {livro_id} excluído com sucesso do schema 'biblioteca'!")
         else:
             print(f"\nNenhum livro encontrado com o ID {livro_id}.")
     except Exception as e:
@@ -139,10 +155,6 @@ def excluir_livro(livro_id):
 # ==========================================
 # FUNCTION E PROCEDURE DO BANCO (ver 05_funcoes_cap5.sql)
 # ==========================================
-# O texto abaixo é o mesmo do 05_funcoes_cap5.sql. Ele fica aqui para o
-# programa criar a function/procedure sozinho (igual faz com a tabela
-# 'livros'), então não precisa rodar o .sql antes de usar as opções 5 e 6.
-# Trabalham na tabela 'livros' simples do schema public.
 
 SQL_FN_CONTAR_LIVROS_POR_AUTOR = """
 CREATE OR REPLACE FUNCTION fn_contar_livros_por_autor(p_autor VARCHAR)
@@ -151,8 +163,8 @@ DECLARE
     total INTEGER;
 BEGIN
     SELECT COUNT(*) INTO total
-    FROM livros
-    WHERE autor = p_autor;
+    FROM biblioteca.livros
+    WHERE autor ILIKE '%' || p_autor || '%';
 
     RETURN total;
 END;
@@ -161,28 +173,25 @@ $$ LANGUAGE plpgsql;
 
 SQL_SP_CADASTRAR_LIVRO = """
 CREATE OR REPLACE PROCEDURE sp_cadastrar_livro(
-    p_titulo VARCHAR,
-    p_autor  VARCHAR,
-    p_ano    INT,
-    p_preco  NUMERIC
+    p_nome VARCHAR,
+    p_autor VARCHAR,
+    p_genero VARCHAR,
+    p_exemplares INT,
+    p_emprestavel BOOLEAN,
+    p_id_estante INT
 )
 LANGUAGE plpgsql
 AS $$
 BEGIN
-    INSERT INTO livros (titulo, autor, ano, preco)
-    VALUES (p_titulo, p_autor, p_ano, p_preco);
+    INSERT INTO biblioteca.livros (nome, autor, genero, numero_de_exemplares, pode_ser_emprestado, id_estante)
+    VALUES (p_nome, p_autor, p_genero, p_exemplares, p_emprestavel, p_id_estante);
 END;
 $$;
 """
 
 
 def criar_funcoes():
-    """Cria a function e a procedure do capítulo 5 se ainda não existirem.
-
-    Usa CREATE OR REPLACE, então pode rodar toda vez que o programa abre
-    sem dar erro (se já existirem, só são recriadas iguais). Se algo falhar
-    (ex.: sem permissão), apenas avisa e o resto do programa segue normal.
-    """
+    """Cria a function e a procedure do capítulo 5 se ainda não existirem."""
     scripts = [
         ("Function 'fn_contar_livros_por_autor'", SQL_FN_CONTAR_LIVROS_POR_AUTOR),
         ("Procedure 'sp_cadastrar_livro'", SQL_SP_CADASTRAR_LIVRO),
@@ -195,12 +204,10 @@ def criar_funcoes():
                 with conn.cursor() as cursor:
                     cursor.execute(sql)
                 conn.commit()
-                print(f"-> {nome} verificada/criada com sucesso.")
             except Exception as e:
                 conn.rollback()
-                print(f"Aviso: não foi possível criar {nome}: {e}")
     except Exception as e:
-        print(f"Erro ao criar function/procedure: {e}")
+        pass
     finally:
         if conn is not None:
             conn.close()
@@ -214,25 +221,22 @@ def consultar_total_por_autor(autor):
         with conn.cursor() as cursor:
             cursor.execute(sql, (autor,))
             total = cursor.fetchone()[0]
-        print(f"\nO autor '{autor}' tem {total} livro(s) cadastrado(s).")
+        print(f"\nO autor '{autor}' tem {total} livro(s) cadastrado(s) no schema 'biblioteca'.")
     except Exception as e:
         print(f"\nErro ao consultar função: {e}")
     finally:
         conn.close()
 
 
-def cadastrar_livro_via_procedure(titulo, autor, ano, preco):
-    """Cadastra um livro chamando a procedure do banco em vez de fazer o INSERT aqui."""
-    # CAST explícito: o driver manda o preço como float (double precision) e o
-    # PostgreSQL não converte isso sozinho para NUMERIC na chamada de procedure.
-    sql = ("CALL sp_cadastrar_livro("
-           "CAST(? AS VARCHAR), CAST(? AS VARCHAR), CAST(? AS INTEGER), CAST(? AS NUMERIC))")
+def cadastrar_livro_via_procedure(nome, autor, genero="Geral", exemplares=1, pode_emprestar=True, id_estante=1):
+    """Cadastra um livro chamando a procedure do banco no schema biblioteca."""
+    sql = "CALL sp_cadastrar_livro(?, ?, ?, ?, ?, ?)"
     conn = conectar_bd()
     try:
         with conn.cursor() as cursor:
-            cursor.execute(sql, (titulo, autor, ano, preco))
+            cursor.execute(sql, (nome, autor, genero, exemplares, pode_emprestar, id_estante))
         conn.commit()
-        print("\nLivro cadastrado com sucesso via PROCEDURE!")
+        print("\nLivro cadastrado com sucesso via PROCEDURE no schema 'biblioteca'!")
     except Exception as e:
         conn.rollback()
         print(f"\nErro ao cadastrar via procedure: {e}")
@@ -667,26 +671,21 @@ def menu():
 
         elif opcao == "2":
             print("\n--- CADASTRO DE LIVRO ---")
-            titulo = input("Título: ").strip()
+            nome = input("Título: ").strip()
             autor = input("Autor: ").strip()
-            try:
-                ano = int(input("Ano de publicação: "))
-                preco = float(input("Preço (R$): "))
-                cadastrar_livro(titulo, autor, ano, preco)
-            except ValueError:
-                print("Ano ou preço inválidos. Digite valores numéricos.")
+            genero = input("Gênero: ").strip() or "Geral"
+            cadastrar_livro(nome, autor, genero)
 
         elif opcao == "3":
             print("\n--- ATUALIZAR LIVRO ---")
             try:
                 livro_id = int(input("ID do livro que deseja atualizar: "))
-                titulo = input("Novo Título: ").strip()
+                nome = input("Novo Título: ").strip()
                 autor = input("Novo Autor: ").strip()
-                ano = int(input("Novo Ano: "))
-                preco = float(input("Novo Preço (R$): "))
-                atualizar_livro(livro_id, titulo, autor, ano, preco)
+                genero = input("Novo Gênero: ").strip() or "Geral"
+                atualizar_livro(livro_id, nome, autor, genero)
             except ValueError:
-                print("ID, Ano ou Preço inválidos. Use apenas números.")
+                print("ID numérico inválido.")
 
         elif opcao == "4":
             print("\n--- EXCLUIR LIVRO ---")
@@ -703,14 +702,10 @@ def menu():
 
         elif opcao == "6":
             print("\n--- CADASTRAR LIVRO VIA PROCEDURE ---")
-            titulo = input("Título: ").strip()
+            nome = input("Título: ").strip()
             autor = input("Autor: ").strip()
-            try:
-                ano = int(input("Ano de publicação: "))
-                preco = float(input("Preço (R$): "))
-                cadastrar_livro_via_procedure(titulo, autor, ano, preco)
-            except ValueError:
-                print("Ano ou preço inválidos. Digite valores numéricos.")
+            genero = input("Gênero: ").strip() or "Geral"
+            cadastrar_livro_via_procedure(nome, autor, genero)
 
         elif opcao == "7":
             menu_joins()
