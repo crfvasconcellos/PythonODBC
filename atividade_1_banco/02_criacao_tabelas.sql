@@ -83,7 +83,7 @@ CREATE TABLE estantes (
 CREATE TABLE livros (
     id_livro SERIAL PRIMARY KEY,
     nome VARCHAR(255) NOT NULL,
-    numero_de_exemplares INT,
+    numero_de_exemplares INT CHECK (numero_de_exemplares >= 0),
     pode_ser_emprestado BOOLEAN,
     autor VARCHAR(255),
     genero VARCHAR(100),
