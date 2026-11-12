@@ -1,0 +1,375 @@
+/* ==========================================================================
+   Sistema da Biblioteca · estilo "vidro fosco" (Liquid Glass)
+   Paleta: Bordô e Latão
+   ========================================================================== */
+
+:root {
+  /* Tamanho base: 1 "px de projeto" = --u. O desenho foi feito em 1280x720;
+     tudo escala com a janela (limitado pela altura ou pela largura). */
+  --u: min(0.13889vh, 0.19vw);
+
+  /* --- Paleta Bordô e Latão ---------------------------------------------- */
+  --vidro:          rgba(90, 20, 36, 0.36);    /* #5A1424 · corpo do vidro */
+  --vidro-reflexo:  rgba(255, 214, 190, 0.30); /* brilho diagonal do vidro */
+  --vidro-borda:    rgba(255, 210, 190, 0.35);
+  --titulo-fundo:   rgba(50, 8, 18, 0.62);     /* #320812 */
+  --titulo-texto:   #FFF1E6;
+  --painel-fundo:   rgba(40, 6, 14, 0.30);     /* #28060E */
+  --linha-fundo:    rgba(255, 238, 226, 0.76); /* #FFEEE2 */
+  --linha-hover:    rgba(255, 247, 240, 0.94);
+  --linha-texto:    #4A0E1C;
+  --latao-claro:    #E8B86A;
+  --latao-escuro:   #C48A2C;
+  --icone-traco:    #3B0A16;
+  --sombra:         rgba(30, 0, 10, 0.5);
+
+  --fonte: "Newsreader", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+}
+
+/* 1 rem = 10 "px de projeto". Ex.: 27 px do projeto = 2.7rem */
+html { font-size: max(4px, calc(var(--u) * 10)); }
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: hidden;
+  background: #1b0a10;
+  color: var(--linha-texto);
+  font-family: var(--fonte);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ==========================================================================
+   Fundo: carrossel (duas camadas que se alternam em fade)
+   ========================================================================== */
+.fundo {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  background: radial-gradient(ellipse at 30% 20%, #4a1626 0%, #1b0a10 70%);
+}
+
+.fundo__camada {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  opacity: 0;
+  transition: opacity 1.8s ease; /* mantenha igual a FADE_MS em js/app.js */
+  will-change: opacity, transform;
+}
+.fundo__camada--visivel { opacity: 1; }
+.fundo__camada--zoom { animation: fundo-zoom 20s linear forwards; }
+
+@keyframes fundo-zoom {
+  from { transform: scale(1); }
+  to   { transform: scale(1.1); }
+}
+
+.fundo__vinheta {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 45%, rgba(0, 0, 0, 0.38) 100%);
+}
+
+/* ==========================================================================
+   Estrutura das telas
+   ========================================================================== */
+.app {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+}
+
+.tela { display: grid; }
+.tela[hidden] { display: none; }
+
+.tela:not([hidden]) .cartao {
+  animation: cartao-entrar 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes cartao-entrar {
+  from { opacity: 0; transform: translateY(1.6rem) scale(0.97); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ==========================================================================
+   Cartão de vidro
+   ========================================================================== */
+.cartao {
+  width: 47rem;
+  height: 63rem;
+  padding: 2.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2.1rem;
+  border-radius: 3.4rem;
+  border: 0.1rem solid var(--vidro-borda);
+  background:
+    linear-gradient(135deg,
+      var(--vidro-reflexo) 0%,
+      rgba(255, 255, 255, 0.05) 38%,
+      rgba(255, 255, 255, 0) 62%,
+      rgba(255, 214, 190, 0.14) 100%),
+    var(--vidro);
+  -webkit-backdrop-filter: blur(2.6rem) saturate(1.8);
+  backdrop-filter: blur(2.6rem) saturate(1.8);
+  box-shadow:
+    0 3rem 7rem var(--sombra),
+    inset 0 0.15rem 0 rgba(255, 225, 210, 0.6),
+    inset 0 -0.1rem 0 rgba(255, 210, 190, 0.15);
+}
+.cartao--largo { width: 50rem; }
+
+.titulo {
+  flex: none;
+  height: 6.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 2.2rem;
+  background: var(--titulo-fundo);
+  box-shadow: inset 0 0.1rem 0 rgba(255, 225, 210, 0.3);
+}
+.titulo h1 {
+  margin: 0;
+  font-size: 3.3rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--titulo-texto);
+  outline: none;
+}
+
+.painel {
+  flex: 1;
+  min-height: 0;
+  padding: 2.7rem 1.5rem;
+  border-radius: 2.8rem;
+  background: var(--painel-fundo);
+  box-shadow:
+    inset 0 0.2rem 0.8rem rgba(0, 0, 0, 0.25),
+    inset 0 0.1rem 0 rgba(255, 225, 210, 0.18);
+}
+
+.lista {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 1.6rem;
+}
+.lista > li { flex: none; }
+
+/* ==========================================================================
+   Botões do menu
+   ========================================================================== */
+.item {
+  position: relative;
+  width: 100%;
+  min-height: 6.2rem;
+  margin: 0;
+  padding: 0.6rem 3.2rem 0.6rem 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  border: 0;
+  border-radius: 1.6rem;
+  background: var(--linha-fundo);
+  color: var(--linha-texto);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow:
+    inset 0 0.1rem 0 rgba(255, 255, 255, 0.8),
+    0 0.2rem 0.8rem rgba(30, 0, 10, 0.25);
+  transition: transform 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.item__icone {
+  flex: none;
+  width: 6.5rem;
+  height: 4.6rem;
+  display: grid;
+  place-items: center;
+  border-radius: 1.3rem;
+  color: var(--icone-traco);
+  background: linear-gradient(160deg, var(--latao-claro), var(--latao-escuro));
+  box-shadow:
+    inset 0 0.1rem 0 rgba(255, 255, 255, 0.6),
+    0 0.2rem 0.6rem rgba(0, 0, 0, 0.25);
+  transition: box-shadow 0.18s ease, filter 0.18s ease;
+}
+
+.icone {
+  width: 2.6rem;
+  height: 2.6rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.item__divisor {
+  flex: none;
+  width: 0.2rem;
+  height: 4rem;
+  border-radius: 0.1rem;
+  background: rgba(74, 14, 28, 0.28);
+}
+
+.item__texto {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 2.7rem;
+  font-weight: 500;
+  line-height: 1.1;
+}
+.item--longo .item__texto {
+  font-size: 2.2rem;
+  line-height: 1.1;
+  text-wrap: balance;
+}
+
+/* setinha que aparece no hover: indica que o botão é clicável */
+.item::after {
+  content: "";
+  position: absolute;
+  right: 1.8rem;
+  top: 50%;
+  width: 0.9rem;
+  height: 0.9rem;
+  margin-top: -0.45rem;
+  border-top: 0.25rem solid currentColor;
+  border-right: 0.25rem solid currentColor;
+  transform: translateX(-0.6rem) rotate(45deg);
+  opacity: 0;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.item:hover,
+.item:focus-visible {
+  background: var(--linha-hover);
+  transform: translateY(-0.2rem);
+  box-shadow:
+    inset 0 0.1rem 0 #fff,
+    0 0.8rem 1.8rem rgba(30, 0, 10, 0.38);
+}
+.item:hover::after,
+.item:focus-visible::after {
+  opacity: 0.7;
+  transform: translateX(0) rotate(45deg);
+}
+.item:hover .item__icone,
+.item:focus-visible .item__icone {
+  filter: brightness(1.08) saturate(1.1);
+  box-shadow:
+    inset 0 0.1rem 0 rgba(255, 255, 255, 0.7),
+    0 0 1.6rem rgba(232, 184, 106, 0.75),
+    0 0.2rem 0.6rem rgba(0, 0, 0, 0.25);
+}
+.item:active { transform: translateY(0); }
+.item:focus-visible { outline: 0.3rem solid var(--latao-claro); outline-offset: 0.3rem; }
+
+/* ==========================================================================
+   Ações avançadas: lista rolável + slider
+   ========================================================================== */
+.corpo {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: 1.2rem;
+}
+
+.painel--rolavel {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.lista--rolavel {
+  height: 100%;
+  padding: 2.7rem 1.5rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;           /* a barra nativa fica escondida; o slider ao lado a substitui */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 1.8rem, #000 calc(100% - 1.8rem), transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 1.8rem, #000 calc(100% - 1.8rem), transparent 100%);
+}
+.lista--rolavel::-webkit-scrollbar { display: none; }
+
+.slider {
+  flex: none;
+  width: 1.4rem;
+  transition: opacity 0.2s ease;
+}
+.slider--inativo { opacity: 0.35; pointer-events: none; }
+
+.slider__trilho {
+  position: relative;
+  height: 100%;
+  border-radius: 1rem;
+  background: var(--painel-fundo);
+  box-shadow: inset 0 0.2rem 0.6rem rgba(0, 0, 0, 0.25);
+  touch-action: none;
+}
+
+.slider__alca {
+  position: absolute;
+  left: 0.15rem;
+  right: 0.15rem;
+  top: 0;
+  height: 6rem;
+  border-radius: 1rem;
+  background: linear-gradient(160deg, var(--latao-claro), var(--latao-escuro));
+  box-shadow:
+    inset 0 0.1rem 0 rgba(255, 255, 255, 0.6),
+    0 0.2rem 0.6rem rgba(0, 0, 0, 0.3);
+  cursor: grab;
+  touch-action: none;
+}
+.slider__alca:hover { filter: brightness(1.1); }
+.slider__alca--arrastando { cursor: grabbing; filter: brightness(1.15); }
+
+/* ==========================================================================
+   Tela de despedida
+   ========================================================================== */
+.cartao--aviso { width: 44rem; height: auto; }
+.painel--aviso {
+  flex: none;
+  padding: 3rem 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2.4rem;
+  text-align: center;
+  color: var(--titulo-texto);
+}
+.painel--aviso p { margin: 0; font-size: 2.4rem; line-height: 1.25; }
+
+/* ==========================================================================
+   Acessibilidade e compatibilidade
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  .fundo__camada { transition-duration: 0.01s; }
+  .fundo__camada--zoom { animation: none; }
+  .tela:not([hidden]) .cartao { animation: none; }
+  .item, .item::after, .item__icone { transition: none; }
+}
+
+/* Sem suporte a desfoque (ou usuário pediu menos transparência): vidro mais opaco */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root { --vidro: rgba(70, 16, 30, 0.9); }
+}
+@media (prefers-reduced-transparency: reduce) {
+  :root { --vidro: rgba(70, 16, 30, 0.95); --titulo-fundo: #320812; --painel-fundo: #28060E; --linha-fundo: #FFEEE2; }
+  .cartao { -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
