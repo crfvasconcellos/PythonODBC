@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sistema da Biblioteca</title>
+  <meta name="theme-color" content="#320812">
+
+  <!-- Fonte do projeto (Newsreader). Sem internet, o navegador usa Palatino/Georgia. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="css/estilo.css">
+  <script src="js/app.js" defer></script>
+</head>
+<body>
+
+  <!-- Ícones (cada um é usado com <use href="#i-nome">) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <symbol id="i-lista" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></symbol>
+    <symbol id="i-mais" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-lapis" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4"/></symbol>
+    <symbol id="i-lixeira" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></symbol>
+    <symbol id="i-ajustes" viewBox="0 0 24 24"><path d="M4 7h16M4 17h16M15 4v6M9 14v6"/></symbol>
+    <symbol id="i-sair" viewBox="0 0 24 24"><path d="M9 4H5v16h4M16 8l4 4-4 4M20 12H9"/></symbol>
+    <symbol id="i-usuario" viewBox="0 0 24 24"><path d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21c0-4 3.6-7 8-7s8 3 8 7"/></symbol>
+    <symbol id="i-banco" viewBox="0 0 24 24"><path d="M4 5.5C4 4.1 7.6 3 12 3s8 1.1 8 2.5S16.4 8 12 8 4 6.9 4 5.5zM4 5.5v6C4 12.9 7.6 14 12 14M20 5.5V10M4 11.5v6C4 18.9 7.6 20 12 20M16 17h6M19 14v6"/></symbol>
+    <symbol id="i-juncao" viewBox="0 0 24 24"><path d="M9 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm6 0a5 5 0 1 0 0 10 5 5 0 0 0 0-10z"/></symbol>
+    <symbol id="i-grafico" viewBox="0 0 24 24"><path d="M5 20V4M5 20h15M9 16v-4M13 16V8M17 16v-6"/></symbol>
+    <symbol id="i-busca" viewBox="0 0 24 24"><path d="M10.5 18a7.5 7.5 0 1 0 0-15 7.5 7.5 0 0 0 0 15zM16 16l5 5"/></symbol>
+    <symbol id="i-auditoria" viewBox="0 0 24 24"><path d="M9 4h6v3H9zM7 5.5H5v15h14v-15h-2M9 14l2 2 4-4"/></symbol>
+    <symbol id="i-alerta" viewBox="0 0 24 24"><path d="M12 4l9 16H3zM12 10v4M12 17h.01"/></symbol>
+    <symbol id="i-usuarios" viewBox="0 0 24 24"><path d="M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2.5 20c0-3.5 2.8-6 6.5-6s6.5 2.5 6.5 6M16 4.2a3.5 3.5 0 0 1 0 6.6M18 14.3c2 .8 3.5 2.7 3.5 5.7"/></symbol>
+    <symbol id="i-faixa" viewBox="0 0 24 24"><path d="M3 12h18M3 7v10M21 7v10M12 9v6"/></symbol>
+    <symbol id="i-cruzar" viewBox="0 0 24 24"><path d="M3 7h4c3 0 4 2 5 5s2 5 5 5h4M3 17h4c1 0 2-.4 2.7-1.2M14.3 8.2C15 7.4 16 7 17 7h4M18 4l3 3-3 3M18 14l3 3-3 3"/></symbol>
+    <symbol id="i-voltar" viewBox="0 0 24 24"><path d="M10 6l-6 6 6 6M4 12h16"/></symbol>
+  </svg>
+
+  <!-- Fundo: carrossel de fotos (controlado por js/app.js) -->
+  <div class="fundo" aria-hidden="true">
+    <div class="fundo__camada"></div>
+    <div class="fundo__camada"></div>
+    <div class="fundo__vinheta"></div>
+  </div>
+
+  <main class="app">
+
+    <!-- ============ TELA PRINCIPAL (CRUD) ============ -->
+    <section class="tela" id="tela-principal" aria-labelledby="titulo-principal">
+      <div class="cartao">
+        <header class="titulo">
+          <h1 id="titulo-principal" tabindex="-1">Escolha sua Ação</h1>
+        </header>
+
+        <div class="painel">
+          <ul class="lista">
+            <li>
+              <button type="button" class="item" data-acao="listar-livros">
+                <span class="item__icone" aria-hidden="true"><svg class="icone"><use href="#i-lista"/></svg></span>
+                <span class="item__divisor" aria-hidden="true"></span>
+                <span class="item__texto">Listar livros</span>
+              </button>
+            </li>
+            <li>
+              <button type="button" class="item" data-acao="cadastrar-livro">
+                <span class="item__icone" aria-hidden="true"><svg class="icone"><use href="#i-mais"/></svg></span>
+                <span class="item__divisor" aria-hidden="true"></span>
+                <span class="item__texto">Cadastrar novo livro</span>
+              </button>
+            </li>
+            <li>
+              <button type="button" class="item" data-acao="atualizar-livro">
+                <span class="item__icone" aria-hidden="true"><svg class="icone"><use href="#i-lapis"/></svg></span>
+                <span class="item__divisor" aria-hidden="true"></span>
+                <span class="item__texto">Atualizar um livro</span>
+              </button>
+            </li>
+            <li>
+              <button type="button" class="item" data-acao="excluir-livro">
+                <span class="item__icone" aria-hidden="true"><svg class="icone"><use href="#i-lixeira"/></svg></span>
+                <span class="item__divisor" aria-hidden="true"></span>
+                <span class="item__texto">Excluir um livro</span>
+              </button>
+            </li>
+            <li>
+              <button type="button" class="item" data-acao="abrir-avancadas">
+                <span class="item__icone" aria-hidden="true"><svg class="icone"><use href="#i-ajustes"/></svg></span>
+                <span class="item__divisor" aria-hidden="true"></span>
+                <span class="item__texto">Opções avançadas</span>
+              </button>
+            </li>
+            <li>
+              <button type="button" class="item" data-acao="sair">
+                <span class="item__icone" aria-hidden="true"><svg class="icone"><use href="#i-sair"/></svg></span>
+                <span class="item__divisor" aria-hidden="true"></span>
+                <span class="item__texto">Sair do sistema</span>
+              </button>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ AÇÕES AVANÇADAS (lista com slider) ============ -->
+    <section class="tela" id="tela-avancada" aria-labelledby="titulo-avancada" hidden>
+      <div class="cartao cartao--largo">
+        <header class="titulo">
+          <h1 id="titulo-avancada" tabindex="-1">Ações Avançadas</h1>
+        </header>
+
+        <div class="corpo">
+          <div class="painel painel--rolavel">
+            <ul class="lista lista--rolavel" id="lista-avancada">
+              <li>
+                <button type="button" class="item item--longo" data-acao="total-por-autor">
+                  <span class="item__icone" aria-hidden="true"><svg class="icone"><use href="#i-usuario"/></svg></span>
+                  <span class="item__divisor" aria-hidden="true"></span>
+                  <span class="item__texto">Consultar total de livros por autor (FUNCTION)</span>
+                </button>
+              </li>
+              <li>
+                <button type="button" class="item item--longo" data-acao="cadastrar-via-procedure">
+                  <span class="item__icone" aria-hidden="true"><svg class="icone"><use href="#i-banco"/></svg></span>
+                  <span class="item__divisor" aria-hidden="true"></span>
+                  <span class="item__texto">Cadastrar livro via PROCEDURE</span>
+                </button>
+              </li>
+              <li>
+                <button type="button" class="item item--longo" data-acao="consultas-join">
+                  <span class="item__icone" aria-hidden="true"><svg class="icone"><use href="#i-juncao"/></svg></span>
+                  <span class="item__divisor" aria-hidden="true"></span>
+                  <span class="item__texto">Consultas com JOIN (Atividade 3 - schema biblioteca)</span>
+                </button>
+              </li>
+              <li>
+                <button type="button" class="item item--longo" data-acao="estatisticas-genero">
+                  <span class="item__icone" aria-hidden="true"><svg class="icone"><use href="#i-grafico"/></svg></span>
+                  <span class="item__divisor" aria-hidden="true"></span>
+                  <span class="item__texto">Relatório Gerencial: Estatísticas por Gênero</span>
+                </button>
+              </li>
+              <li>
+                <button type="button" class="item item--longo" data-acao="busca-catalogo">
+                  <span class="item__icone" aria-hidden="true"><svg class="icone"><use href="#i-busca"/></svg></span>
+                  <span class="item__divisor" aria-hidden="true"></span>
+                  <span class="item__texto">Buscar no Catálogo Completo (Palavra-chave)</span>
+                </button>
+              </li>
+              <li>
+                <button type="button" class="item item--longo" data-acao="estantes-vazias">
+                  <span class="item__icone" aria-hidden="true"><svg class="icone"><use href="#i-auditoria"/></svg></span>
+                  <span class="item__divisor" aria-hidden="true"></span>
+                  <span class="item__texto">Auditoria: Listar Estantes Vazias</span>
+                </button>
+              </li>
+              <li>
+                <button type="button" class="item item--longo" data-acao="acervo-critico">
+                  <span class="item__icone" aria-hidden="true"><svg class="icone"><use href="#i-alerta"/></svg></span>
+                  <span class="item__divisor" aria-hidden="true"></span>
+                  <span class="item__texto">Análise de Acervo Crítico</span>
+                </button>
+              </li>
+              <li>
+                <button type="button" class="item item--longo" data-acao="autores-unicos">
+                  <span class="item__icone" aria-hidden="true"><svg class="icone"><use href="#i-usuarios"/></svg></span>
+                  <span class="item__divisor" aria-hidden="true"></span>
+                  <span class="item__texto">Listar Autores Únicos</span>
+                </button>
+              </li>
+              <li>
+                <button type="button" class="item item--longo" data-acao="faixa-exemplares">
+                  <span class="item__icone" aria-hidden="true"><svg class="icone"><use href="#i-faixa"/></svg></span>
+                  <span class="item__divisor" aria-hidden="true"></span>
+                  <span class="item__texto">Buscar Livros por Faixa de Exemplares</span>
+                </button>
+              </li>
+              <li>
+                <button type="button" class="item item--longo" data-acao="autores-multigenero">
+                  <span class="item__icone" aria-hidden="true"><svg class="icone"><use href="#i-cruzar"/></svg></span>
+                  <span class="item__divisor" aria-hidden="true"></span>
+                  <span class="item__texto">Relatório de Autores Multigênero</span>
+                </button>
+              </li>
+              <li>
+                <button type="button" class="item" data-acao="voltar-crud">
+                  <span class="item__icone" aria-hidden="true"><svg class="icone"><use href="#i-voltar"/></svg></span>
+                  <span class="item__divisor" aria-hidden="true"></span>
+                  <span class="item__texto">Voltar ao CRUD</span>
+                </button>
+              </li>
+              <li>
+                <button type="button" class="item" data-acao="sair">
+                  <span class="item__icone" aria-hidden="true"><svg class="icone"><use href="#i-sair"/></svg></span>
+                  <span class="item__divisor" aria-hidden="true"></span>
+                  <span class="item__texto">Sair do Sistema</span>
+                </button>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Slider (barra de rolagem personalizada, ligada à lista ao lado) -->
+          <div class="slider" id="slider-avancada" aria-hidden="true">
+            <div class="slider__trilho"><div class="slider__alca"></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ TELA DE DESPEDIDA (aparece quando o navegador não deixa o script fechar a aba) ============ -->
+    <section class="tela" id="tela-saida" aria-labelledby="titulo-saida" hidden>
+      <div class="cartao cartao--aviso">
+        <header class="titulo">
+          <h1 id="titulo-saida" tabindex="-1">Sistema encerrado</h1>
+        </header>
+        <div class="painel painel--aviso">
+          <p>Você já pode fechar esta aba do navegador.</p>
+          <button type="button" class="item" data-acao="reabrir">
+            <span class="item__icone" aria-hidden="true"><svg class="icone"><use href="#i-voltar"/></svg></span>
+            <span class="item__divisor" aria-hidden="true"></span>
+            <span class="item__texto">Voltar ao sistema</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</body>
+</html>
