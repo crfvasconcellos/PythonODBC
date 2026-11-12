@@ -1,0 +1,238 @@
+/* ==========================================================================
+   Sistema da Biblioteca · comportamento da interface
+   (ainda sem ligação com o backend do CRUD)
+   ========================================================================== */
+(() => {
+  'use strict';
+
+  /* ------------------------------------------------------------------------
+     1. FUNDO EM CARROSSEL
+     Para incluir mais fotos, coloque o arquivo em img/fundos/ e acrescente
+     o caminho na lista abaixo.
+     ------------------------------------------------------------------------ */
+  const FUNDOS = [
+    'img/fundos/fundo-01.jpg',
+    'img/fundos/fundo-02.jpg',
+    'img/fundos/fundo-03.jpg',
+    'img/fundos/fundo-04.jpg',
+    'img/fundos/fundo-05.jpg',
+    'img/fundos/fundo-06.jpg',
+    'img/fundos/fundo-07.jpg',
+    'img/fundos/fundo-08.jpg',
+    'img/fundos/fundo-09.jpg',
+    'img/fundos/fundo-10.jpg',
+    'img/fundos/fundo-11.jpg',
+    'img/fundos/fundo-12.jpg',
+    'img/fundos/fundo-13.jpg',
+    'img/fundos/fundo-14.jpg',
+    'img/fundos/fundo-15.jpg',
+    'img/fundos/fundo-16.jpg',
+    'img/fundos/fundo-17.jpg',
+    'img/fundos/fundo-18.jpg',
+  ];
+  const INTERVALO_MS = 9000; // tempo que cada foto fica na tela
+  const FADE_MS = 1800;      // duração da transição entre fotos (igual ao transition do CSS)
+
+  function embaralhar(lista) {
+    const copia = [...lista];
+    for (let i = copia.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [copia[i], copia[j]] = [copia[j], copia[i]];
+    }
+    return copia;
+  }
+
+  function carregarImagem(url) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve(true);
+      img.onerror = () => resolve(false);
+      img.src = url;
+    });
+  }
+
+  function iniciarCarrossel() {
+    const camadas = Array.from(document.querySelectorAll('.fundo__camada'));
+    if (camadas.length < 2 || FUNDOS.length === 0) return;
+
+    const ordem = embaralhar(FUNDOS); // a ordem muda a cada vez que a página abre
+    let indice = -1;
+    let ativa = 1;                    // camada que está na tela (a primeira troca usa a 0)
+    let ocupado = false;
+    let apagar = null;
+
+    function mostrar(url) {
+      const entrando = camadas[1 - ativa];
+      const saindo = camadas[ativa];
+
+      entrando.style.backgroundImage = `url("${url}")`;
+      // a foto nova aparece POR CIMA da atual, sem "piscada" escura no meio do fade
+      entrando.style.zIndex = '2';
+      saindo.style.zIndex = '1';
+      // reinicia o zoom lento da camada que vai entrar
+      entrando.classList.remove('fundo__camada--zoom');
+      void entrando.offsetWidth;
+      entrando.classList.add('fundo__camada--zoom', 'fundo__camada--visivel');
+
+      // a foto anterior só é apagada depois que a nova cobriu a tela
+      clearTimeout(apagar);
+      apagar = setTimeout(() => saindo.classList.remove('fundo__camada--visivel'), FADE_MS + 100);
+      ativa = 1 - ativa;
+    }
+
+    async function proxima() {
+      if (ocupado) return;
+      ocupado = true;
+      // pula fotos que não carregarem (arquivo faltando, por exemplo)
+      for (let tentativas = 0; tentativas < ordem.length; tentativas++) {
+        indice = (indice + 1) % ordem.length;
+        if (await carregarImagem(ordem[indice])) {
+          mostrar(ordem[indice]);
+          carregarImagem(ordem[(indice + 1) % ordem.length]); // já deixa a próxima no cache
+          break;
+        }
+      }
+      ocupado = false;
+    }
+
+    proxima();
+    setInterval(() => { if (!document.hidden) proxima(); }, INTERVALO_MS);
+  }
+
+  /* ------------------------------------------------------------------------
+     2. TELAS
+     ------------------------------------------------------------------------ */
+  const telas = {
+    principal: document.getElementById('tela-principal'),
+    avancada:  document.getElementById('tela-avancada'),
+    saida:     document.getElementById('tela-saida'),
+  };
+
+  let atualizarSlider = () => {};
+
+  function mostrarTela(nome) {
+    for (const [chave, elemento] of Object.entries(telas)) {
+      elemento.hidden = chave !== nome;
+    }
+    if (nome === 'avancada') {
+      document.getElementById('lista-avancada').scrollTop = 0;
+    }
+    atualizarSlider();
+    requestAnimationFrame(atualizarSlider);
+    // leva o foco para o título da nova tela (leitores de tela anunciam a mudança)
+    telas[nome].querySelector('h1').focus({ preventScroll: true });
+  }
+
+  function sairDoSistema() {
+    // Os navegadores só deixam um script fechar abas abertas por script (window.open).
+    // Numa aba aberta pelo usuário o comando é ignorado, então mostramos a despedida.
+    window.close();
+    mostrarTela('saida');
+  }
+
+  /* ------------------------------------------------------------------------
+     3. AÇÕES DOS BOTÕES
+     Cada botão do HTML tem um data-acao="nome". Só as ações registradas aqui
+     fazem alguma coisa; as outras só mostram o efeito de hover.
+     ------------------------------------------------------------------------ */
+  const ACOES = {
+    'abrir-avancadas': () => mostrarTela('avancada'),
+    'voltar-crud':     () => mostrarTela('principal'),
+    'reabrir':         () => mostrarTela('principal'),
+    'sair':            sairDoSistema,
+
+    // Ainda sem backend (liguem aqui quando estiver pronto), por exemplo:
+    //   'listar-livros':   () => ...,
+    //   'cadastrar-livro': () => ...,
+    //   'atualizar-livro': () => ...,
+    //   'excluir-livro':   () => ...,
+    //   'total-por-autor', 'cadastrar-via-procedure', 'consultas-join',
+    //   'estatisticas-genero', 'busca-catalogo', 'estantes-vazias',
+    //   'acervo-critico', 'autores-unicos', 'faixa-exemplares', 'autores-multigenero'
+  };
+
+  document.addEventListener('click', (evento) => {
+    const botao = evento.target.closest('[data-acao]');
+    if (!botao) return;
+    const acao = ACOES[botao.dataset.acao];
+    if (acao) acao(botao);
+  });
+
+  /* ------------------------------------------------------------------------
+     4. SLIDER (barra de rolagem personalizada da tela de Ações Avançadas)
+     ------------------------------------------------------------------------ */
+  function iniciarSlider(lista, slider) {
+    const trilho = slider.querySelector('.slider__trilho');
+    const alca = slider.querySelector('.slider__alca');
+
+    function atualizar() {
+      const { scrollHeight, clientHeight, scrollTop } = lista;
+      const rolavel = scrollHeight > clientHeight + 1;
+      slider.classList.toggle('slider--inativo', !rolavel);
+      if (!rolavel) {
+        alca.style.height = '100%';
+        alca.style.transform = 'translateY(0)';
+        return;
+      }
+      const alturaTrilho = trilho.clientHeight;
+      const alturaAlca = Math.max(alturaTrilho * 0.08, alturaTrilho * clientHeight / scrollHeight);
+      const proporcao = scrollTop / (scrollHeight - clientHeight);
+      alca.style.height = `${alturaAlca}px`;
+      alca.style.transform = `translateY(${proporcao * (alturaTrilho - alturaAlca)}px)`;
+    }
+
+    lista.addEventListener('scroll', atualizar, { passive: true });
+    window.addEventListener('resize', atualizar);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(atualizar);
+
+    // arrastar a alça
+    let arrasto = null;
+    alca.addEventListener('pointerdown', (e) => {
+      alca.setPointerCapture(e.pointerId);
+      arrasto = { y: e.clientY, topo: lista.scrollTop };
+      alca.classList.add('slider__alca--arrastando');
+      e.preventDefault();
+    });
+    alca.addEventListener('pointermove', (e) => {
+      if (!arrasto) return;
+      const espaco = trilho.clientHeight - alca.offsetHeight;
+      if (espaco <= 0) return;
+      const fator = (lista.scrollHeight - lista.clientHeight) / espaco;
+      lista.scrollTop = arrasto.topo + (e.clientY - arrasto.y) * fator;
+    });
+    const soltar = () => {
+      arrasto = null;
+      alca.classList.remove('slider__alca--arrastando');
+    };
+    alca.addEventListener('pointerup', soltar);
+    alca.addEventListener('pointercancel', soltar);
+
+    // clicar no trilho leva a alça até o ponto clicado
+    trilho.addEventListener('pointerdown', (e) => {
+      if (e.target === alca) return;
+      const caixa = trilho.getBoundingClientRect();
+      const espaco = caixa.height - alca.offsetHeight;
+      if (espaco <= 0) return;
+      const pos = Math.min(1, Math.max(0, (e.clientY - caixa.top - alca.offsetHeight / 2) / espaco));
+      lista.scrollTo({ top: pos * (lista.scrollHeight - lista.clientHeight), behavior: 'smooth' });
+    });
+
+    // a roda do mouse sobre o slider também rola a lista
+    slider.addEventListener('wheel', (e) => {
+      lista.scrollBy({ top: e.deltaY });
+      e.preventDefault();
+    }, { passive: false });
+
+    return atualizar;
+  }
+
+  /* ------------------------------------------------------------------------
+     Início
+     ------------------------------------------------------------------------ */
+  atualizarSlider = iniciarSlider(
+    document.getElementById('lista-avancada'),
+    document.getElementById('slider-avancada')
+  );
+  iniciarCarrossel();
+  telas.principal.querySelector('h1').focus({ preventScroll: true });
+})();
