@@ -1,0 +1,744 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sistema da Biblioteca</title>
+  <meta name="theme-color" content="#320812">
+
+  <!-- Fonte do projeto (Newsreader). Sem internet, o navegador usa Palatino/Georgia. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="css/estilo.css">
+  <script src="js/app.js" defer></script>
+</head>
+<body>
+
+  <!-- Ícones (cada um é usado com <use href="#i-nome">) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <symbol id="i-lista" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></symbol>
+    <symbol id="i-mais" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-lapis" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4"/></symbol>
+    <symbol id="i-lixeira" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></symbol>
+    <symbol id="i-ajustes" viewBox="0 0 24 24"><path d="M4 7h16M4 17h16M15 4v6M9 14v6"/></symbol>
+    <symbol id="i-sair" viewBox="0 0 24 24"><path d="M9 4H5v16h4M16 8l4 4-4 4M20 12H9"/></symbol>
+    <symbol id="i-usuario" viewBox="0 0 24 24"><path d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21c0-4 3.6-7 8-7s8 3 8 7"/></symbol>
+    <symbol id="i-banco" viewBox="0 0 24 24"><path d="M4 5.5C4 4.1 7.6 3 12 3s8 1.1 8 2.5S16.4 8 12 8 4 6.9 4 5.5zM4 5.5v6C4 12.9 7.6 14 12 14M20 5.5V10M4 11.5v6C4 18.9 7.6 20 12 20M16 17h6M19 14v6"/></symbol>
+    <symbol id="i-juncao" viewBox="0 0 24 24"><path d="M9 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm6 0a5 5 0 1 0 0 10 5 5 0 0 0 0-10z"/></symbol>
+    <symbol id="i-grafico" viewBox="0 0 24 24"><path d="M5 20V4M5 20h15M9 16v-4M13 16V8M17 16v-6"/></symbol>
+    <symbol id="i-busca" viewBox="0 0 24 24"><path d="M10.5 18a7.5 7.5 0 1 0 0-15 7.5 7.5 0 0 0 0 15zM16 16l5 5"/></symbol>
+    <symbol id="i-auditoria" viewBox="0 0 24 24"><path d="M9 4h6v3H9zM7 5.5H5v15h14v-15h-2M9 14l2 2 4-4"/></symbol>
+    <symbol id="i-alerta" viewBox="0 0 24 24"><path d="M12 4l9 16H3zM12 10v4M12 17h.01"/></symbol>
+    <symbol id="i-usuarios" viewBox="0 0 24 24"><path d="M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2.5 20c0-3.5 2.8-6 6.5-6s6.5 2.5 6.5 6M16 4.2a3.5 3.5 0 0 1 0 6.6M18 14.3c2 .8 3.5 2.7 3.5 5.7"/></symbol>
+    <symbol id="i-faixa" viewBox="0 0 24 24"><path d="M3 12h18M3 7v10M21 7v10M12 9v6"/></symbol>
+    <symbol id="i-cruzar" viewBox="0 0 24 24"><path d="M3 7h4c3 0 4 2 5 5s2 5 5 5h4M3 17h4c1 0 2-.4 2.7-1.2M14.3 8.2C15 7.4 16 7 17 7h4M18 4l3 3-3 3M18 14l3 3-3 3"/></symbol>
+    <symbol id="i-voltar" viewBox="0 0 24 24"><path d="M10 6l-6 6 6 6M4 12h16"/></symbol>
+  </svg>
+
+  <!-- Fundo: carrossel de fotos (controlado por js/app.js) -->
+  <div class="fundo" aria-hidden="true">
+    <div class="fundo__camada"></div>
+    <div class="fundo__camada"></div>
+    <div class="fundo__vinheta"></div>
+  </div>
+
+  <main class="app">
+
+    <!-- ============ TELA PRINCIPAL (CRUD) ============ -->
+    <section class="tela" id="tela-principal" aria-labelledby="titulo-principal">
+      <div class="cartao">
+        <header class="titulo">
+          <h1 id="titulo-principal" tabindex="-1">Escolha sua Ação</h1>
+        </header>
+
+        <div class="painel">
+          <ul class="lista">
+            <li>
+              <button type="button" class="item" data-acao="listar-livros">
+                <span class="item__icone" aria-hidden="true"><svg class="icone"><use href="#i-lista"/></svg></span>
+                <span class="item__divisor" aria-hidden="true"></span>
+                <span class="item__texto">Listar livros</span>
+              </button>
+            </li>
+            <li>
+              <button type="button" class="item" data-acao="cadastrar-livro">
+                <span class="item__icone" aria-hidden="true"><svg class="icone"><use href="#i-mais"/></svg></span>
+                <span class="item__divisor" aria-hidden="true"></span>
+                <span class="item__texto">Cadastrar novo livro</span>
+              </button>
+            </li>
+            <li>
+              <button type="button" class="item" data-acao="atualizar-livro">
+                <span class="item__icone" aria-hidden="true"><svg class="icone"><use href="#i-lapis"/></svg></span>
+                <span class="item__divisor" aria-hidden="true"></span>
+                <span class="item__texto">Atualizar um livro</span>
+              </button>
+            </li>
+            <li>
+              <button type="button" class="item" data-acao="excluir-livro">
+                <span class="item__icone" aria-hidden="true"><svg class="icone"><use href="#i-lixeira"/></svg></span>
+                <span class="item__divisor" aria-hidden="true"></span>
+                <span class="item__texto">Excluir um livro</span>
+              </button>
+            </li>
+            <li>
+              <button type="button" class="item" data-acao="abrir-avancadas">
+                <span class="item__icone" aria-hidden="true"><svg class="icone"><use href="#i-ajustes"/></svg></span>
+                <span class="item__divisor" aria-hidden="true"></span>
+                <span class="item__texto">Opções avançadas</span>
+              </button>
+            </li>
+            <li>
+              <button type="button" class="item" data-acao="sair">
+                <span class="item__icone" aria-hidden="true"><svg class="icone"><use href="#i-sair"/></svg></span>
+                <span class="item__divisor" aria-hidden="true"></span>
+                <span class="item__texto">Sair do sistema</span>
+              </button>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ AÇÕES AVANÇADAS (lista com slider) ============ -->
+    <section class="tela" id="tela-avancada" aria-labelledby="titulo-avancada" hidden>
+      <div class="cartao cartao--largo">
+        <header class="titulo">
+          <h1 id="titulo-avancada" tabindex="-1">Ações Avançadas</h1>
+        </header>
+
+        <div class="corpo">
+          <div class="painel painel--rolavel">
+            <ul class="lista lista--rolavel" id="lista-avancada">
+              <li>
+                <button type="button" class="item item--longo" data-acao="total-por-autor">
+                  <span class="item__icone" aria-hidden="true"><svg class="icone"><use href="#i-usuario"/></svg></span>
+                  <span class="item__divisor" aria-hidden="true"></span>
+                  <span class="item__texto">Consultar total de livros por autor (FUNCTION)</span>
+                </button>
+              </li>
+              <li>
+                <button type="button" class="item item--longo" data-acao="cadastrar-via-procedure">
+                  <span class="item__icone" aria-hidden="true"><svg class="icone"><use href="#i-banco"/></svg></span>
+                  <span class="item__divisor" aria-hidden="true"></span>
+                  <span class="item__texto">Cadastrar livro via PROCEDURE</span>
+                </button>
+              </li>
+              <li>
+                <button type="button" class="item item--longo" data-acao="consultas-join">
+                  <span class="item__icone" aria-hidden="true"><svg class="icone"><use href="#i-juncao"/></svg></span>
+                  <span class="item__divisor" aria-hidden="true"></span>
+                  <span class="item__texto">Consultas com JOIN (Atividade 3 - schema biblioteca)</span>
+                </button>
+              </li>
+              <li>
+                <button type="button" class="item item--longo" data-acao="estatisticas-genero">
+                  <span class="item__icone" aria-hidden="true"><svg class="icone"><use href="#i-grafico"/></svg></span>
+                  <span class="item__divisor" aria-hidden="true"></span>
+                  <span class="item__texto">Relatório Gerencial: Estatísticas por Gênero</span>
+                </button>
+              </li>
+              <li>
+                <button type="button" class="item item--longo" data-acao="busca-catalogo">
+                  <span class="item__icone" aria-hidden="true"><svg class="icone"><use href="#i-busca"/></svg></span>
+                  <span class="item__divisor" aria-hidden="true"></span>
+                  <span class="item__texto">Buscar no Catálogo Completo (Palavra-chave)</span>
+                </button>
+              </li>
+              <li>
+                <button type="button" class="item item--longo" data-acao="estantes-vazias">
+                  <span class="item__icone" aria-hidden="true"><svg class="icone"><use href="#i-auditoria"/></svg></span>
+                  <span class="item__divisor" aria-hidden="true"></span>
+                  <span class="item__texto">Auditoria: Listar Estantes Vazias</span>
+                </button>
+              </li>
+              <li>
+                <button type="button" class="item item--longo" data-acao="acervo-critico">
+                  <span class="item__icone" aria-hidden="true"><svg class="icone"><use href="#i-alerta"/></svg></span>
+                  <span class="item__divisor" aria-hidden="true"></span>
+                  <span class="item__texto">Análise de Acervo Crítico</span>
+                </button>
+              </li>
+              <li>
+                <button type="button" class="item item--longo" data-acao="autores-unicos">
+                  <span class="item__icone" aria-hidden="true"><svg class="icone"><use href="#i-usuarios"/></svg></span>
+                  <span class="item__divisor" aria-hidden="true"></span>
+                  <span class="item__texto">Listar Autores Únicos</span>
+                </button>
+              </li>
+              <li>
+                <button type="button" class="item item--longo" data-acao="faixa-exemplares">
+                  <span class="item__icone" aria-hidden="true"><svg class="icone"><use href="#i-faixa"/></svg></span>
+                  <span class="item__divisor" aria-hidden="true"></span>
+                  <span class="item__texto">Buscar Livros por Faixa de Exemplares</span>
+                </button>
+              </li>
+              <li>
+                <button type="button" class="item item--longo" data-acao="autores-multigenero">
+                  <span class="item__icone" aria-hidden="true"><svg class="icone"><use href="#i-cruzar"/></svg></span>
+                  <span class="item__divisor" aria-hidden="true"></span>
+                  <span class="item__texto">Relatório de Autores Multigênero</span>
+                </button>
+              </li>
+              <li>
+                <button type="button" class="item" data-acao="voltar-crud">
+                  <span class="item__icone" aria-hidden="true"><svg class="icone"><use href="#i-voltar"/></svg></span>
+                  <span class="item__divisor" aria-hidden="true"></span>
+                  <span class="item__texto">Voltar ao CRUD</span>
+                </button>
+              </li>
+              <li>
+                <button type="button" class="item" data-acao="sair">
+                  <span class="item__icone" aria-hidden="true"><svg class="icone"><use href="#i-sair"/></svg></span>
+                  <span class="item__divisor" aria-hidden="true"></span>
+                  <span class="item__texto">Sair do Sistema</span>
+                </button>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Slider (barra de rolagem personalizada, ligada à lista ao lado) -->
+          <div class="slider" id="slider-avancada" aria-hidden="true">
+            <div class="slider__trilho"><div class="slider__alca"></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 1. LISTAR LIVROS ============ -->
+    <section class="tela" id="tela-listagem" aria-labelledby="titulo-listagem" hidden>
+      <div class="cartao cartao--catalogo">
+        <header class="titulo">
+          <h1 id="titulo-listagem" tabindex="-1">Listar Livros</h1>
+        </header>
+
+        <div class="catalogo-info">
+          <p id="catalogo-resumo" aria-live="polite">Acervo ainda não consultado.</p>
+          <p id="catalogo-pendencias" class="catalogo-info__pendencias" aria-live="polite" hidden></p>
+        </div>
+
+        <div class="corpo corpo--catalogo">
+          <div class="painel painel--rolavel painel--catalogo">
+            <div class="catalogo-scroll" id="lista-livros" aria-live="polite">
+              <div class="estado-vazio" id="catalogo-vazio">
+                <svg class="icone estado-vazio__icone" aria-hidden="true"><use href="#i-lista"/></svg>
+                <h2>Nenhum livro registrado ainda.</h2>
+                <p>A listagem ficará disponível quando a API estiver conectada ao banco de dados.</p>
+              </div>
+            </div>
+          </div>
+          <!-- Mesmo controle de rolagem da tela de ações avançadas. -->
+          <div class="slider" id="slider-livros" aria-hidden="true">
+            <div class="slider__trilho"><div class="slider__alca"></div></div>
+          </div>
+        </div>
+
+        <div class="barra-acoes">
+          <button type="button" class="botao botao--secundario" data-acao="voltar-crud">Voltar ao menu</button>
+          <button type="button" class="botao botao--destaque" data-acao="sincronizar-pendencias" id="botao-sincronizar" hidden>Sincronizar pendências</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Modelo sem dados fictícios; o JavaScript o preenche com registros reais da API. -->
+    <template id="modelo-livro">
+      <article class="ficha-livro">
+        <dl>
+          <div><dt>Nome:</dt><dd data-campo="nome"></dd></div>
+          <div><dt>Gênero:</dt><dd data-campo="genero"></dd></div>
+          <div><dt>Número de exemplares:</dt><dd data-campo="numero_de_exemplares"></dd></div>
+          <div><dt>Autor(a):</dt><dd data-campo="autor"></dd></div>
+          <div><dt>Pode ser emprestado?</dt><dd data-campo="pode_ser_emprestado"></dd></div>
+        </dl>
+        <span class="ficha-livro__id" data-campo="id_livro"></span>
+      </article>
+    </template>
+
+    <!-- ============ 2. CADASTRAR NOVO LIVRO ============ -->
+    <section class="tela" id="tela-cadastro" aria-labelledby="titulo-cadastro" hidden>
+      <div class="cartao cartao--formulario">
+        <header class="titulo">
+          <h1 id="titulo-cadastro" tabindex="-1">Cadastrar novo livro</h1>
+        </header>
+        <form class="formulario-livro" id="form-cadastro">
+          <div class="formulario-livro__rolagem">
+            <div class="campo">
+              <label for="cadastro-nome">Insira nome do livro:</label>
+              <input id="cadastro-nome" name="nome" type="text" maxlength="255" autocomplete="off" required>
+            </div>
+            <div class="campo">
+              <label for="cadastro-autor">Insira nome do autor(a):</label>
+              <input id="cadastro-autor" name="autor" type="text" maxlength="255" autocomplete="off" required>
+            </div>
+            <div class="campo">
+              <label for="cadastro-exemplares">Insira número de exemplares:</label>
+              <input id="cadastro-exemplares" name="numero_de_exemplares" type="number" min="0" max="999999" step="1" required>
+            </div>
+            <div class="campo">
+              <label for="cadastro-genero">Insira o gênero:</label>
+              <input id="cadastro-genero" name="genero" type="text" maxlength="100" autocomplete="off" required>
+            </div>
+            <div class="campo campo--opcoes" role="radiogroup" aria-labelledby="cadastro-emprestimo-titulo">
+              <span class="campo--opcoes__titulo" id="cadastro-emprestimo-titulo">Pode ser emprestado?</span>
+              <div class="opcoes-radio">
+                <label><input type="radio" name="pode_ser_emprestado" value="true" checked required><span>Sim</span></label>
+                <label><input type="radio" name="pode_ser_emprestado" value="false"><span>Não</span></label>
+              </div>
+            </div>
+            <div class="campo">
+              <label for="cadastro-estante">ID da estante:</label>
+              <input id="cadastro-estante" name="id_estante" type="number" min="1" step="1" required>
+              <small>Obrigatório no banco: o livro deve pertencer a uma estante existente.</small>
+            </div>
+          </div>
+          <p class="mensagem-formulario" id="mensagem-cadastro" role="status" aria-live="polite"></p>
+          <div class="barra-acoes">
+            <button type="button" class="botao botao--secundario" data-acao="voltar-cadastro">Voltar</button>
+            <button type="submit" class="botao botao--destaque">Salvar cadastro</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- ============ 3. ATUALIZAR LIVRO ============ -->
+    <section class="tela" id="tela-atualizacao" aria-labelledby="titulo-atualizacao" hidden>
+      <div class="cartao cartao--formulario">
+        <header class="titulo">
+          <h1 id="titulo-atualizacao" tabindex="-1">Atualizar um livro</h1>
+        </header>
+        <form class="formulario-livro" id="form-atualizacao">
+          <div class="formulario-livro__rolagem">
+            <div class="campo">
+              <label for="atualizacao-id">ID do livro que deseja atualizar:</label>
+              <input id="atualizacao-id" name="id_livro" type="number" min="1" step="1" required>
+            </div>
+            <p class="aviso-campo">Informe os novos dados do livro. A atualização será preparada para envio à API.</p>
+            <div class="campo">
+              <label for="atualizacao-nome">Novo nome do livro:</label>
+              <input id="atualizacao-nome" name="nome" type="text" maxlength="255" required>
+            </div>
+            <div class="campo">
+              <label for="atualizacao-autor">Novo nome do autor(a):</label>
+              <input id="atualizacao-autor" name="autor" type="text" maxlength="255" required>
+            </div>
+            <div class="campo">
+              <label for="atualizacao-exemplares">Novo número de exemplares:</label>
+              <input id="atualizacao-exemplares" name="numero_de_exemplares" type="number" min="0" max="999999" step="1" required>
+            </div>
+            <div class="campo">
+              <label for="atualizacao-genero">Novo gênero:</label>
+              <input id="atualizacao-genero" name="genero" type="text" maxlength="100" required>
+            </div>
+            <div class="campo campo--opcoes" role="radiogroup" aria-labelledby="atualizacao-emprestimo-titulo">
+              <span class="campo--opcoes__titulo" id="atualizacao-emprestimo-titulo">Pode ser emprestado?</span>
+              <div class="opcoes-radio">
+                <label><input type="radio" name="pode_ser_emprestado" value="true" checked required><span>Sim</span></label>
+                <label><input type="radio" name="pode_ser_emprestado" value="false"><span>Não</span></label>
+              </div>
+            </div>
+          </div>
+          <p class="mensagem-formulario" id="mensagem-atualizacao" role="status" aria-live="polite"></p>
+          <div class="barra-acoes">
+            <button type="button" class="botao botao--secundario" data-acao="voltar-crud">Voltar</button>
+            <button type="submit" class="botao botao--destaque">Salvar alteração</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- ============ 4. EXCLUIR LIVRO ============ -->
+    <section class="tela" id="tela-exclusao" aria-labelledby="titulo-exclusao" hidden>
+      <div class="cartao cartao--exclusao">
+        <header class="titulo">
+          <h1 id="titulo-exclusao" tabindex="-1">Excluir um livro</h1>
+        </header>
+        <form class="formulario-livro" id="form-exclusao">
+          <div class="formulario-livro__rolagem">
+            <div class="campo">
+              <label for="exclusao-tipo">Como deseja identificar o livro?</label>
+              <select id="exclusao-tipo" name="tipo_identificador">
+                <option value="id">Pelo ID do livro</option>
+                <option value="nome">Pelo nome do livro</option>
+              </select>
+            </div>
+            <div class="campo">
+              <label for="exclusao-valor" id="exclusao-label">Insira o ID do livro:</label>
+              <input id="exclusao-valor" name="identificador" type="text" inputmode="numeric" maxlength="255" required autocomplete="off">
+            </div>
+            <p class="aviso-campo">A exclusão só será confirmada quando o servidor responder. Nomes repetidos precisam ser identificados pelo ID antes da remoção.</p>
+          </div>
+          <p class="mensagem-formulario" id="mensagem-exclusao" role="status" aria-live="polite"></p>
+          <div class="barra-acoes">
+            <button type="button" class="botao botao--secundario" data-acao="voltar-crud">Voltar</button>
+            <button type="submit" class="botao botao--perigo">Solicitar exclusão</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- ============ AVANÇADA: CONSULTA POR AUTOR (FUNCTION) ============ -->
+    <section class="tela" id="tela-autor" aria-labelledby="titulo-autor" hidden>
+      <div class="cartao cartao--catalogo cartao--autor">
+        <header class="titulo">
+          <h1 id="titulo-autor" tabindex="-1">Consultar livro por autor</h1>
+        </header>
+        <form id="form-autor" class="formulario-consulta">
+          <div class="campo">
+            <label for="autor-nome">Insira nome do autor(a):</label>
+            <input id="autor-nome" name="autor" type="text" maxlength="255" autocomplete="off" required>
+          </div>
+          <button class="botao botao--destaque" type="submit" id="botao-buscar-autor">Buscar</button>
+        </form>
+        <p class="resumo-consulta" id="resumo-autor" role="status" aria-live="polite">Digite um nome para consultar o acervo por autor.</p>
+        <div class="corpo corpo--catalogo">
+          <div class="painel painel--rolavel painel--catalogo">
+            <div class="catalogo-scroll" id="lista-autor" aria-live="polite">
+              <div class="estado-vazio">
+                <svg class="icone estado-vazio__icone" aria-hidden="true"><use href="#i-busca"/></svg>
+                <h2>Aguardando pesquisa</h2>
+                <p>Insira o nome de um autor e clique em Buscar.</p>
+              </div>
+            </div>
+          </div>
+          <div class="slider" id="slider-autor" aria-hidden="true">
+            <div class="slider__trilho"><div class="slider__alca"></div></div>
+          </div>
+        </div>
+        <div class="barra-acoes">
+          <button type="button" class="botao botao--secundario" data-acao="voltar-avancadas">Voltar às ações avançadas</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ AVANÇADA: SUBMENU DAS CINCO JUNÇÕES ============ -->
+    <section class="tela" id="tela-joins" aria-labelledby="titulo-joins" hidden>
+      <div class="cartao cartao--joins">
+        <header class="titulo">
+          <h1 id="titulo-joins" tabindex="-1">Consultas com JOIN</h1>
+        </header>
+        <div class="painel painel--joins">
+          <ul class="lista lista--joins">
+            <li><button type="button" class="item item--join" data-join="natural">
+              <span class="item__icone" aria-hidden="true"><svg class="icone"><use href="#i-juncao"/></svg></span>
+              <span class="item__divisor" aria-hidden="true"></span>
+              <span class="item__texto">Natural Join <small>Livros × Estantes</small></span>
+            </button></li>
+            <li><button type="button" class="item item--join" data-join="inner">
+              <span class="item__icone" aria-hidden="true"><svg class="icone"><use href="#i-juncao"/></svg></span>
+              <span class="item__divisor" aria-hidden="true"></span>
+              <span class="item__texto">Inner Join <small>Estantes × Espaços</small></span>
+            </button></li>
+            <li><button type="button" class="item item--join" data-join="left">
+              <span class="item__icone" aria-hidden="true"><svg class="icone"><use href="#i-juncao"/></svg></span>
+              <span class="item__divisor" aria-hidden="true"></span>
+              <span class="item__texto">Left Outer Join <small>Espaços × Estantes</small></span>
+            </button></li>
+            <li><button type="button" class="item item--join" data-join="right">
+              <span class="item__icone" aria-hidden="true"><svg class="icone"><use href="#i-juncao"/></svg></span>
+              <span class="item__divisor" aria-hidden="true"></span>
+              <span class="item__texto">Right Outer Join <small>Espaços × Estantes</small></span>
+            </button></li>
+            <li><button type="button" class="item item--join" data-join="full">
+              <span class="item__icone" aria-hidden="true"><svg class="icone"><use href="#i-juncao"/></svg></span>
+              <span class="item__divisor" aria-hidden="true"></span>
+              <span class="item__texto">Full Outer Join <small>Espaços × Estantes</small></span>
+            </button></li>
+            <li><button type="button" class="item item--join" data-acao="voltar-avancadas">
+              <span class="item__icone" aria-hidden="true"><svg class="icone"><use href="#i-voltar"/></svg></span>
+              <span class="item__divisor" aria-hidden="true"></span>
+              <span class="item__texto">Voltar ao menu</span>
+            </button></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ AVANÇADA: RESULTADO DA JUNÇÃO SELECIONADA ============ -->
+    <section class="tela" id="tela-join-resultado" aria-labelledby="titulo-join-resultado" hidden>
+      <div class="cartao cartao--catalogo cartao--join-resultado">
+        <header class="titulo">
+          <h1 id="titulo-join-resultado" tabindex="-1">Resultado da JOIN</h1>
+        </header>
+        <p class="resumo-consulta" id="resumo-join" role="status" aria-live="polite"></p>
+        <div class="corpo corpo--catalogo">
+          <div class="painel painel--rolavel painel--catalogo">
+            <div class="catalogo-scroll" id="lista-join" aria-live="polite"></div>
+          </div>
+          <div class="slider" id="slider-join" aria-hidden="true">
+            <div class="slider__trilho"><div class="slider__alca"></div></div>
+          </div>
+        </div>
+        <div class="barra-acoes">
+          <button type="button" class="botao botao--secundario" data-acao="voltar-joins">Voltar às JOINs</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ AVANÇADA: RELATÓRIO GERENCIAL POR GÊNERO ============ -->
+    <section class="tela" id="tela-relatorio-genero" aria-labelledby="titulo-relatorio-genero" hidden>
+      <div class="cartao cartao--catalogo cartao--relatorio">
+        <header class="titulo">
+          <h1 id="titulo-relatorio-genero" tabindex="-1">Relatório por Gênero</h1>
+        </header>
+        <form id="form-relatorio-genero" class="formulario-consulta">
+          <div class="campo">
+            <label for="media-minima-genero">Média mínima de exemplares:</label>
+            <input id="media-minima-genero" name="media_minima" type="number" min="0" step="any" inputmode="decimal" placeholder="Ex.: 5" required>
+            <small>Serão mostrados somente os gêneros cuja média de exemplares por livro seja maior que o valor informado.</small>
+          </div>
+          <button type="submit" class="botao botao--destaque" id="botao-relatorio-genero">Gerar relatório</button>
+        </form>
+        <p class="resumo-consulta" id="resumo-relatorio-genero" role="status" aria-live="polite">Informe um valor para consultar as estatísticas por gênero.</p>
+        <div class="corpo corpo--catalogo">
+          <div class="painel painel--rolavel painel--catalogo">
+            <div class="catalogo-scroll" id="lista-relatorio-genero" aria-live="polite">
+              <div class="estado-vazio">
+                <svg class="icone estado-vazio__icone" aria-hidden="true"><use href="#i-grafico"/></svg>
+                <h2>Aguardando o filtro</h2>
+                <p>O resultado mostrará a média, o mínimo e o máximo de exemplares para cada gênero encontrado.</p>
+              </div>
+            </div>
+          </div>
+          <div class="slider" id="slider-relatorio-genero" aria-hidden="true">
+            <div class="slider__trilho"><div class="slider__alca"></div></div>
+          </div>
+        </div>
+        <div class="barra-acoes">
+          <button type="button" class="botao botao--secundario" data-acao="voltar-avancadas">Voltar às ações avançadas</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ AVANÇADA: BUSCA DE PALAVRA-CHAVE NO CATÁLOGO ============ -->
+    <section class="tela" id="tela-busca-catalogo" aria-labelledby="titulo-busca-catalogo" hidden>
+      <div class="cartao cartao--catalogo cartao--busca-catalogo">
+        <header class="titulo">
+          <h1 id="titulo-busca-catalogo" tabindex="-1">Buscar no Catálogo</h1>
+        </header>
+        <form id="form-busca-catalogo" class="formulario-consulta">
+          <div class="campo">
+            <label for="termo-catalogo">Título ou nome do autor:</label>
+            <input id="termo-catalogo" name="termo" type="text" maxlength="255" placeholder="Digite uma palavra-chave" autocomplete="off" required>
+            <small>A busca não diferencia maiúsculas e minúsculas e encontra correspondências parciais.</small>
+          </div>
+          <button type="submit" class="botao botao--destaque" id="botao-busca-catalogo">Buscar obras</button>
+        </form>
+        <p class="resumo-consulta" id="resumo-busca-catalogo" role="status" aria-live="polite">Digite uma palavra-chave para consultar os títulos e autores.</p>
+        <div class="corpo corpo--catalogo">
+          <div class="painel painel--rolavel painel--catalogo">
+            <div class="catalogo-scroll" id="lista-busca-catalogo" aria-live="polite">
+              <div class="estado-vazio">
+                <svg class="icone estado-vazio__icone" aria-hidden="true"><use href="#i-busca"/></svg>
+                <h2>Aguardando pesquisa</h2>
+                <p>As obras encontradas aparecerão aqui com seus dados do catálogo completo.</p>
+              </div>
+            </div>
+          </div>
+          <div class="slider" id="slider-busca-catalogo" aria-hidden="true">
+            <div class="slider__trilho"><div class="slider__alca"></div></div>
+          </div>
+        </div>
+        <div class="barra-acoes">
+          <button type="button" class="botao botao--secundario" data-acao="voltar-avancadas">Voltar às ações avançadas</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ AVANÇADA: AUDITORIA DE ESTANTES SEM LIVROS (EXCEPT) ============ -->
+    <section class="tela" id="tela-estantes-vazias" aria-labelledby="titulo-estantes-vazias" hidden>
+      <div class="cartao cartao--catalogo cartao--estantes-vazias">
+        <header class="titulo">
+          <h1 id="titulo-estantes-vazias" tabindex="-1">Estantes Vazias</h1>
+        </header>
+        <p class="resumo-consulta" id="resumo-estantes-vazias" role="status" aria-live="polite">A auditoria identifica estantes sem nenhum livro associado.</p>
+        <div class="corpo corpo--catalogo">
+          <div class="painel painel--rolavel painel--catalogo">
+            <div class="catalogo-scroll" id="lista-estantes-vazias" aria-live="polite">
+              <div class="estado-vazio">
+                <svg class="icone estado-vazio__icone" aria-hidden="true"><use href="#i-auditoria"/></svg>
+                <h2>Aguardando auditoria</h2>
+                <p>As estantes sem livros aparecerão aqui, com ID e domínio.</p>
+              </div>
+            </div>
+          </div>
+          <div class="slider" id="slider-estantes-vazias" aria-hidden="true">
+            <div class="slider__trilho"><div class="slider__alca"></div></div>
+          </div>
+        </div>
+        <div class="barra-acoes">
+          <button type="button" class="botao botao--destaque" data-acao="estantes-vazias">Consultar novamente</button>
+          <button type="button" class="botao botao--secundario" data-acao="voltar-avancadas">Voltar</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ AVANÇADA: ANÁLISE DE ACERVO CRÍTICO (CTE / SOME) ============ -->
+    <section class="tela" id="tela-acervo-critico" aria-labelledby="titulo-acervo-critico" hidden>
+      <div class="cartao cartao--catalogo cartao--acervo-critico">
+        <header class="titulo">
+          <h1 id="titulo-acervo-critico" tabindex="-1">Análise de Acervo Crítico</h1>
+        </header>
+        <form id="form-acervo-critico" class="formulario-consulta">
+          <div class="campo">
+            <label for="acervo-genero-alvo">Domínio das estantes:</label>
+            <input id="acervo-genero-alvo" name="genero_alvo" type="text" maxlength="100" autocomplete="off" placeholder="Ex.: Literatura" required>
+            <small>Corresponde ao campo domínio_lado_1 da estante (parâmetro genero_alvo no Python).</small>
+          </div>
+          <div class="campo">
+            <label for="acervo-genero-comparacao">Gênero dos livros para comparação:</label>
+            <input id="acervo-genero-comparacao" name="genero_comparacao" type="text" maxlength="100" autocomplete="off" placeholder="Ex.: Ficção" required>
+            <small>Mostra livros nas estantes selecionadas com mais exemplares do que pelo menos um livro deste gênero.</small>
+          </div>
+          <button type="submit" class="botao botao--destaque" id="botao-acervo-critico">Analisar acervo</button>
+        </form>
+        <p class="resumo-consulta" id="resumo-acervo-critico" role="status" aria-live="polite">Preencha os dois parâmetros da análise.</p>
+        <div class="corpo corpo--catalogo">
+          <div class="painel painel--rolavel painel--catalogo">
+            <div class="catalogo-scroll" id="lista-acervo-critico" aria-live="polite">
+              <div class="estado-vazio">
+                <svg class="icone estado-vazio__icone" aria-hidden="true"><use href="#i-alerta"/></svg>
+                <h2>Aguardando os filtros</h2>
+                <p>Serão exibidos os títulos e as quantidades de exemplares retornados pelo SQL.</p>
+              </div>
+            </div>
+          </div>
+          <div class="slider" id="slider-acervo-critico" aria-hidden="true">
+            <div class="slider__trilho"><div class="slider__alca"></div></div>
+          </div>
+        </div>
+        <div class="barra-acoes">
+          <button type="button" class="botao botao--secundario" data-acao="voltar-avancadas">Voltar às ações avançadas</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ AVANÇADA: LISTA DE AUTORES ÚNICOS (DISTINCT) ============ -->
+    <section class="tela" id="tela-autores-unicos" aria-labelledby="titulo-autores-unicos" hidden>
+      <div class="cartao cartao--catalogo cartao--autores-unicos">
+        <header class="titulo">
+          <h1 id="titulo-autores-unicos" tabindex="-1">Autores Únicos</h1>
+        </header>
+        <p class="resumo-consulta" id="resumo-autores-unicos" role="status" aria-live="polite">Cada autor cadastrado aparece uma vez, em ordem alfabética.</p>
+        <div class="corpo corpo--catalogo">
+          <div class="painel painel--rolavel painel--catalogo">
+            <div class="catalogo-scroll" id="lista-autores-unicos" aria-live="polite">
+              <div class="estado-vazio">
+                <svg class="icone estado-vazio__icone" aria-hidden="true"><use href="#i-usuarios"/></svg>
+                <h2>Aguardando consulta</h2>
+                <p>Os nomes distintos dos autores aparecerão aqui quando a API estiver disponível.</p>
+              </div>
+            </div>
+          </div>
+          <div class="slider" id="slider-autores-unicos" aria-hidden="true">
+            <div class="slider__trilho"><div class="slider__alca"></div></div>
+          </div>
+        </div>
+        <div class="barra-acoes">
+          <button type="button" class="botao botao--destaque" data-acao="autores-unicos">Consultar novamente</button>
+          <button type="button" class="botao botao--secundario" data-acao="voltar-avancadas">Voltar</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ AVANÇADA: LIVROS POR FAIXA DE EXEMPLARES (BETWEEN) ============ -->
+    <section class="tela" id="tela-faixa-exemplares" aria-labelledby="titulo-faixa-exemplares" hidden>
+      <div class="cartao cartao--catalogo cartao--faixa-exemplares">
+        <header class="titulo">
+          <h1 id="titulo-faixa-exemplares" tabindex="-1">Livros por Faixa de Exemplares</h1>
+        </header>
+        <form id="form-faixa-exemplares" class="formulario-consulta">
+          <div class="campos-em-linha">
+            <div class="campo">
+              <label for="faixa-minimo">Mínimo de exemplares:</label>
+              <input id="faixa-minimo" name="minimo" type="number" min="0" step="1" inputmode="numeric" placeholder="Ex.: 2" required>
+            </div>
+            <div class="campo">
+              <label for="faixa-maximo">Máximo de exemplares:</label>
+              <input id="faixa-maximo" name="maximo" type="number" min="0" step="1" inputmode="numeric" placeholder="Ex.: 10" required>
+            </div>
+          </div>
+          <p class="formulario-consulta__dica">Os dois limites estão incluídos na busca. As obras serão ordenadas da maior para a menor quantidade de exemplares.</p>
+          <button type="submit" class="botao botao--destaque" id="botao-faixa-exemplares">Buscar livros</button>
+        </form>
+        <p class="resumo-consulta" id="resumo-faixa-exemplares" role="status" aria-live="polite">Informe o mínimo e o máximo de exemplares para consultar os livros.</p>
+        <div class="corpo corpo--catalogo">
+          <div class="painel painel--rolavel painel--catalogo">
+            <div class="catalogo-scroll" id="lista-faixa-exemplares" aria-live="polite">
+              <div class="estado-vazio">
+                <svg class="icone estado-vazio__icone" aria-hidden="true"><use href="#i-faixa"/></svg>
+                <h2>Aguardando os limites</h2>
+                <p>Os livros encontrados aparecerão aqui com título, autor e número de exemplares.</p>
+              </div>
+            </div>
+          </div>
+          <div class="slider" id="slider-faixa-exemplares" aria-hidden="true">
+            <div class="slider__trilho"><div class="slider__alca"></div></div>
+          </div>
+        </div>
+        <div class="barra-acoes">
+          <button type="button" class="botao botao--secundario" data-acao="voltar-avancadas">Voltar às ações avançadas</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ AVANÇADA: AUTORES QUE ESCREVEM DOIS GÊNEROS (INTERSECT) ============ -->
+    <section class="tela" id="tela-autores-multigenero" aria-labelledby="titulo-autores-multigenero" hidden>
+      <div class="cartao cartao--catalogo cartao--autores-multigenero">
+        <header class="titulo">
+          <h1 id="titulo-autores-multigenero" tabindex="-1">Autores Multigênero</h1>
+        </header>
+        <form id="form-autores-multigenero" class="formulario-consulta">
+          <div class="campo">
+            <label for="multigenero-genero1">Primeiro gênero:</label>
+            <input id="multigenero-genero1" name="genero1" type="text" maxlength="100" autocomplete="off" placeholder="Ex.: Fantasia" required>
+          </div>
+          <div class="campo">
+            <label for="multigenero-genero2">Segundo gênero:</label>
+            <input id="multigenero-genero2" name="genero2" type="text" maxlength="100" autocomplete="off" placeholder="Ex.: Terror" required>
+          </div>
+          <p class="formulario-consulta__dica">O relatório apresenta uma vez cada autor que tenha pelo menos uma obra cadastrada em cada um dos dois gêneros informados.</p>
+          <button type="submit" class="botao botao--destaque" id="botao-autores-multigenero">Gerar relatório</button>
+        </form>
+        <p class="resumo-consulta" id="resumo-autores-multigenero" role="status" aria-live="polite">Informe dois gêneros para encontrar os autores em comum.</p>
+        <div class="corpo corpo--catalogo">
+          <div class="painel painel--rolavel painel--catalogo">
+            <div class="catalogo-scroll" id="lista-autores-multigenero" aria-live="polite">
+              <div class="estado-vazio">
+                <svg class="icone estado-vazio__icone" aria-hidden="true"><use href="#i-cruzar"/></svg>
+                <h2>Aguardando os gêneros</h2>
+                <p>Os autores encontrados pela operação INTERSECT aparecerão aqui, sem repetições.</p>
+              </div>
+            </div>
+          </div>
+          <div class="slider" id="slider-autores-multigenero" aria-hidden="true">
+            <div class="slider__trilho"><div class="slider__alca"></div></div>
+          </div>
+        </div>
+        <div class="barra-acoes">
+          <button type="button" class="botao botao--secundario" data-acao="voltar-avancadas">Voltar às ações avançadas</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ TELA DE DESPEDIDA (aparece quando o navegador não deixa o script fechar a aba) ============ -->
+    <section class="tela" id="tela-saida" aria-labelledby="titulo-saida" hidden>
+      <div class="cartao cartao--aviso">
+        <header class="titulo">
+          <h1 id="titulo-saida" tabindex="-1">Sistema encerrado</h1>
+        </header>
+        <div class="painel painel--aviso">
+          <p>Você já pode fechar esta aba do navegador.</p>
+          <button type="button" class="item" data-acao="reabrir">
+            <span class="item__icone" aria-hidden="true"><svg class="icone"><use href="#i-voltar"/></svg></span>
+            <span class="item__divisor" aria-hidden="true"></span>
+            <span class="item__texto">Voltar ao sistema</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</body>
+</html>
