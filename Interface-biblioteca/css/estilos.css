@@ -1,0 +1,846 @@
+/* ==========================================================================
+   Sistema da Biblioteca · estilo "vidro fosco" (Liquid Glass)
+   Paleta: Bordô e Latão
+   ========================================================================== */
+
+:root {
+  /* Tamanho base: 1 "px de projeto" = --u. O desenho foi feito em 1280x720;
+     tudo escala com a janela (limitado pela altura ou pela largura). */
+  --u: min(0.13889vh, 0.19vw);
+
+  /* --- Paleta Bordô e Latão ---------------------------------------------- */
+  --vidro:          rgba(90, 20, 36, 0.36);    /* #5A1424 · corpo do vidro */
+  --vidro-reflexo:  rgba(255, 214, 190, 0.30); /* brilho diagonal do vidro */
+  --vidro-borda:    rgba(255, 210, 190, 0.35);
+  --titulo-fundo:   rgba(50, 8, 18, 0.62);     /* #320812 */
+  --titulo-texto:   #FFF1E6;
+  --painel-fundo:   rgba(40, 6, 14, 0.30);     /* #28060E */
+  --linha-fundo:    rgba(255, 238, 226, 0.76); /* #FFEEE2 */
+  --linha-hover:    rgba(255, 247, 240, 0.94);
+  --linha-texto:    #4A0E1C;
+  --latao-claro:    #E8B86A;
+  --latao-escuro:   #C48A2C;
+  --icone-traco:    #3B0A16;
+  --sombra:         rgba(30, 0, 10, 0.5);
+
+  --fonte: "Newsreader", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+}
+
+/* 1 rem = 10 "px de projeto". Ex.: 27 px do projeto = 2.7rem */
+html { font-size: max(4px, calc(var(--u) * 10)); }
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: hidden;
+  background: #1b0a10;
+  color: var(--linha-texto);
+  font-family: var(--fonte);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ==========================================================================
+   Fundo: carrossel (duas camadas que se alternam em fade)
+   ========================================================================== */
+.fundo {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  background: radial-gradient(ellipse at 30% 20%, #4a1626 0%, #1b0a10 70%);
+}
+
+.fundo__camada {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  opacity: 0;
+  transition: opacity 1.8s ease; /* mantenha igual a FADE_MS em js/app.js */
+  will-change: opacity, transform;
+}
+.fundo__camada--visivel { opacity: 1; }
+.fundo__camada--zoom { animation: fundo-zoom 20s linear forwards; }
+
+@keyframes fundo-zoom {
+  from { transform: scale(1); }
+  to   { transform: scale(1.1); }
+}
+
+.fundo__vinheta {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 45%, rgba(0, 0, 0, 0.38) 100%);
+}
+
+/* ==========================================================================
+   Estrutura das telas
+   ========================================================================== */
+.app {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+}
+
+.tela { display: grid; }
+.tela[hidden] { display: none; }
+
+.tela:not([hidden]) .cartao {
+  animation: cartao-entrar 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes cartao-entrar {
+  from { opacity: 0; transform: translateY(1.6rem) scale(0.97); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ==========================================================================
+   Cartão de vidro
+   ========================================================================== */
+.cartao {
+  width: 47rem;
+  height: 63rem;
+  padding: 2.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2.1rem;
+  border-radius: 3.4rem;
+  border: 0.1rem solid var(--vidro-borda);
+  background:
+    linear-gradient(135deg,
+      var(--vidro-reflexo) 0%,
+      rgba(255, 255, 255, 0.05) 38%,
+      rgba(255, 255, 255, 0) 62%,
+      rgba(255, 214, 190, 0.14) 100%),
+    var(--vidro);
+  -webkit-backdrop-filter: blur(2.6rem) saturate(1.8);
+  backdrop-filter: blur(2.6rem) saturate(1.8);
+  box-shadow:
+    0 3rem 7rem var(--sombra),
+    inset 0 0.15rem 0 rgba(255, 225, 210, 0.6),
+    inset 0 -0.1rem 0 rgba(255, 210, 190, 0.15);
+}
+.cartao--largo { width: 50rem; }
+
+.titulo {
+  flex: none;
+  height: 6.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 2.2rem;
+  background: var(--titulo-fundo);
+  box-shadow: inset 0 0.1rem 0 rgba(255, 225, 210, 0.3);
+}
+.titulo h1 {
+  margin: 0;
+  font-size: 3.3rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--titulo-texto);
+  outline: none;
+}
+
+.painel {
+  flex: 1;
+  min-height: 0;
+  padding: 2.7rem 1.5rem;
+  border-radius: 2.8rem;
+  background: var(--painel-fundo);
+  box-shadow:
+    inset 0 0.2rem 0.8rem rgba(0, 0, 0, 0.25),
+    inset 0 0.1rem 0 rgba(255, 225, 210, 0.18);
+}
+
+.lista {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 1.6rem;
+}
+.lista > li { flex: none; }
+
+/* ==========================================================================
+   Botões do menu
+   ========================================================================== */
+.item {
+  position: relative;
+  width: 100%;
+  min-height: 6.2rem;
+  margin: 0;
+  padding: 0.6rem 3.2rem 0.6rem 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  border: 0;
+  border-radius: 1.6rem;
+  background: var(--linha-fundo);
+  color: var(--linha-texto);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow:
+    inset 0 0.1rem 0 rgba(255, 255, 255, 0.8),
+    0 0.2rem 0.8rem rgba(30, 0, 10, 0.25);
+  transition: transform 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.item__icone {
+  flex: none;
+  width: 6.5rem;
+  height: 4.6rem;
+  display: grid;
+  place-items: center;
+  border-radius: 1.3rem;
+  color: var(--icone-traco);
+  background: linear-gradient(160deg, var(--latao-claro), var(--latao-escuro));
+  box-shadow:
+    inset 0 0.1rem 0 rgba(255, 255, 255, 0.6),
+    0 0.2rem 0.6rem rgba(0, 0, 0, 0.25);
+  transition: box-shadow 0.18s ease, filter 0.18s ease;
+}
+
+.icone {
+  width: 2.6rem;
+  height: 2.6rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.item__divisor {
+  flex: none;
+  width: 0.2rem;
+  height: 4rem;
+  border-radius: 0.1rem;
+  background: rgba(74, 14, 28, 0.28);
+}
+
+.item__texto {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 2.7rem;
+  font-weight: 500;
+  line-height: 1.1;
+}
+.item--longo .item__texto {
+  font-size: 2.2rem;
+  line-height: 1.1;
+  text-wrap: balance;
+}
+
+/* setinha que aparece no hover: indica que o botão é clicável */
+.item::after {
+  content: "";
+  position: absolute;
+  right: 1.8rem;
+  top: 50%;
+  width: 0.9rem;
+  height: 0.9rem;
+  margin-top: -0.45rem;
+  border-top: 0.25rem solid currentColor;
+  border-right: 0.25rem solid currentColor;
+  transform: translateX(-0.6rem) rotate(45deg);
+  opacity: 0;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.item:hover,
+.item:focus-visible {
+  background: var(--linha-hover);
+  transform: translateY(-0.2rem);
+  box-shadow:
+    inset 0 0.1rem 0 #fff,
+    0 0.8rem 1.8rem rgba(30, 0, 10, 0.38);
+}
+.item:hover::after,
+.item:focus-visible::after {
+  opacity: 0.7;
+  transform: translateX(0) rotate(45deg);
+}
+.item:hover .item__icone,
+.item:focus-visible .item__icone {
+  filter: brightness(1.08) saturate(1.1);
+  box-shadow:
+    inset 0 0.1rem 0 rgba(255, 255, 255, 0.7),
+    0 0 1.6rem rgba(232, 184, 106, 0.75),
+    0 0.2rem 0.6rem rgba(0, 0, 0, 0.25);
+}
+.item:active { transform: translateY(0); }
+.item:focus-visible { outline: 0.3rem solid var(--latao-claro); outline-offset: 0.3rem; }
+
+/* ==========================================================================
+   Ações avançadas: lista rolável + slider
+   ========================================================================== */
+.corpo {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: 1.2rem;
+}
+
+.painel--rolavel {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.lista--rolavel {
+  height: 100%;
+  padding: 2.7rem 1.5rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;           /* a barra nativa fica escondida; o slider ao lado a substitui */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 1.8rem, #000 calc(100% - 1.8rem), transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 1.8rem, #000 calc(100% - 1.8rem), transparent 100%);
+}
+.lista--rolavel::-webkit-scrollbar { display: none; }
+
+.slider {
+  flex: none;
+  width: 1.4rem;
+  transition: opacity 0.2s ease;
+}
+.slider--inativo { opacity: 0.35; pointer-events: none; }
+
+.slider__trilho {
+  position: relative;
+  height: 100%;
+  border-radius: 1rem;
+  background: var(--painel-fundo);
+  box-shadow: inset 0 0.2rem 0.6rem rgba(0, 0, 0, 0.25);
+  touch-action: none;
+}
+
+.slider__alca {
+  position: absolute;
+  left: 0.15rem;
+  right: 0.15rem;
+  top: 0;
+  height: 6rem;
+  border-radius: 1rem;
+  background: linear-gradient(160deg, var(--latao-claro), var(--latao-escuro));
+  box-shadow:
+    inset 0 0.1rem 0 rgba(255, 255, 255, 0.6),
+    0 0.2rem 0.6rem rgba(0, 0, 0, 0.3);
+  cursor: grab;
+  touch-action: none;
+}
+.slider__alca:hover { filter: brightness(1.1); }
+.slider__alca--arrastando { cursor: grabbing; filter: brightness(1.15); }
+
+/* ==========================================================================
+   Tela de despedida
+   ========================================================================== */
+.cartao--aviso { width: 44rem; height: auto; }
+.painel--aviso {
+  flex: none;
+  padding: 3rem 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2.4rem;
+  text-align: center;
+  color: var(--titulo-texto);
+}
+.painel--aviso p { margin: 0; font-size: 2.4rem; line-height: 1.25; }
+
+/* ==========================================================================
+   Acessibilidade e compatibilidade
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  .fundo__camada { transition-duration: 0.01s; }
+  .fundo__camada--zoom { animation: none; }
+  .tela:not([hidden]) .cartao { animation: none; }
+  .item, .item::after, .item__icone { transition: none; }
+}
+
+/* Sem suporte a desfoque (ou usuário pediu menos transparência): vidro mais opaco */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root { --vidro: rgba(70, 16, 30, 0.9); }
+}
+@media (prefers-reduced-transparency: reduce) {
+  :root { --vidro: rgba(70, 16, 30, 0.95); --titulo-fundo: #320812; --painel-fundo: #28060E; --linha-fundo: #FFEEE2; }
+  .cartao { -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+
+/* ==========================================================================
+   CRUD de livros (quatro primeiras ações do menu)
+   Reutiliza vidro, bordô, creme, latão e slider da interface original.
+   ========================================================================== */
+.cartao--catalogo,
+.cartao--formulario,
+.cartao--exclusao {
+  width: 55rem;
+  height: min(67rem, calc(100dvh - 2.4rem));
+  min-height: 0;
+  gap: 1.4rem;
+}
+.cartao--catalogo { width: 57rem; }
+.cartao--exclusao { height: min(52rem, calc(100dvh - 2.4rem)); }
+.cartao--formulario .titulo h1,
+.cartao--exclusao .titulo h1 { font-size: 3.05rem; }
+
+.catalogo-info {
+  flex: none;
+  padding: 0.2rem 0.8rem;
+  color: var(--titulo-texto);
+  font-size: 1.85rem;
+  line-height: 1.25;
+}
+.catalogo-info p { margin: 0.2rem 0; }
+.catalogo-info__pendencias { color: #ffe3a2; }
+
+.corpo--catalogo { gap: 1.1rem; }
+.painel--catalogo { padding: 0; }
+.catalogo-scroll {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.3rem;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 1.5rem;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+.catalogo-scroll::-webkit-scrollbar { display: none; }
+.ficha-livro {
+  flex: none;
+  border: 0.15rem solid rgba(255, 221, 185, 0.7);
+  border-radius: 1.5rem;
+  background: var(--linha-fundo);
+  color: var(--linha-texto);
+  padding: 1.25rem 1.55rem;
+  box-shadow: inset 0 0.1rem 0 #fff8, 0 0.25rem 1rem rgba(22, 0, 10, 0.2);
+  overflow-wrap: anywhere;
+}
+.ficha-livro dl { margin: 0; }
+.ficha-livro dl > div { display: flex; gap: 0.6rem; align-items: baseline; font-size: 2.05rem; line-height: 1.22; }
+.ficha-livro dt { font-weight: 600; flex: none; }
+.ficha-livro dd { margin: 0; min-width: 0; }
+.ficha-livro__id {
+  display: block;
+  margin-top: 0.6rem;
+  font-size: 1.45rem;
+  color: #744451;
+}
+.estado-vazio {
+  flex: 1;
+  min-height: 22rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  color: var(--titulo-texto);
+  gap: 1.1rem;
+  padding: 2rem;
+}
+.estado-vazio__icone { width: 5.8rem; height: 5.8rem; color: var(--latao-claro); }
+.estado-vazio h2 { font-size: 2.8rem; font-weight: 500; margin: 0; line-height: 1.1; }
+.estado-vazio p { max-width: 36rem; font-size: 1.9rem; line-height: 1.25; margin: 0; }
+
+.formulario-livro {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+.formulario-livro__rolagem {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 1.2rem 1.3rem;
+  border-radius: 2.3rem;
+  background: var(--painel-fundo);
+  scrollbar-width: thin;
+  scrollbar-color: var(--latao-claro) rgba(50, 8, 18, 0.38);
+}
+.formulario-livro__rolagem::-webkit-scrollbar { width: 0.9rem; }
+.formulario-livro__rolagem::-webkit-scrollbar-track { background: rgba(50, 8, 18, 0.38); border-radius: 1rem; }
+.formulario-livro__rolagem::-webkit-scrollbar-thumb { background: var(--latao-escuro); border-radius: 1rem; }
+.campo {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin: 0;
+  padding: 1.1rem 1.25rem;
+  border: 0;
+  border-radius: 1.4rem;
+  background: rgba(255, 238, 226, 0.83);
+  color: var(--linha-texto);
+}
+.campo label,
+.campo legend,
+.campo--opcoes__titulo {
+  font: 500 2.35rem / 1.08 var(--fonte);
+}
+.campo input[type="text"],
+.campo input[type="number"],
+.campo select {
+  width: 100%;
+  height: 4.7rem;
+  min-height: 3.6rem;
+  padding: 0.65rem 1.15rem;
+  border: 0.15rem solid transparent;
+  border-radius: 1rem;
+  background: #682435;
+  color: var(--titulo-texto);
+  font: 500 2.2rem / 1 var(--fonte);
+  outline-offset: 0.2rem;
+  outline-color: var(--latao-escuro);
+}
+.campo input:focus-visible,
+.campo select:focus-visible {
+  border-color: var(--latao-claro);
+  outline: 0.25rem solid var(--latao-escuro);
+}
+.campo select { cursor: pointer; }
+.campo small { font-size: 1.55rem; line-height: 1.2; color: #6a3c45; }
+/* O título faz parte do fluxo da caixa (sem a sobreposição de <legend> em flex). */
+.campo--opcoes { gap: 0.9rem; padding-top: 1.1rem; }
+.campo--opcoes__titulo { display: block; }
+.opcoes-radio { display: flex; gap: 1rem; }
+.opcoes-radio label {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: block;
+  cursor: pointer;
+  font-size: 2.15rem;
+}
+/* O radio segue acessível e exclusivo, mas a aparência é do botão inteiro. */
+.opcoes-radio input[type="radio"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  opacity: 0;
+}
+.opcoes-radio label span {
+  min-height: 4.3rem;
+  padding: 0.5rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 1.1rem;
+  background: #682435;
+  color: var(--titulo-texto);
+  transition: background-color 0.18s ease, color 0.18s ease, filter 0.18s ease;
+}
+.opcoes-radio input[type="radio"]:checked + span {
+  background: linear-gradient(150deg, #f1c879, #c58b31);
+  color: #39121d;
+  box-shadow: inset 0 0.1rem 0 rgba(255,255,255,0.55);
+}
+.opcoes-radio label:hover span { filter: brightness(1.08); }
+.opcoes-radio input[type="radio"]:focus-visible + span {
+  outline: 0.25rem solid var(--latao-claro);
+  outline-offset: 0.25rem;
+}
+.aviso-campo {
+  flex: none;
+  color: var(--titulo-texto);
+  font-size: 1.9rem;
+  line-height: 1.3;
+  margin: 0;
+  padding: 0.75rem 1rem;
+}
+.mensagem-formulario {
+  flex: none;
+  min-height: 0;
+  margin: 0;
+  padding: 0 0.6rem;
+  font-size: 1.85rem;
+  line-height: 1.2;
+  color: #ffe3a2;
+}
+.mensagem-formulario:empty { display: none; }
+.mensagem-formulario[data-tipo="erro"] { color: #ffdbd8; }
+.mensagem-formulario[data-tipo="sucesso"] { color: #e9ffde; }
+
+.barra-acoes { flex: none; display: flex; gap: 1.15rem; }
+.botao {
+  flex: 1;
+  min-width: 0;
+  min-height: 4.7rem;
+  padding: 0.7rem 1.1rem;
+  border-radius: 1.2rem;
+  border: 0.1rem solid rgba(255, 221, 185, 0.45);
+  color: var(--titulo-texto);
+  background: var(--titulo-fundo);
+  font: 600 2.05rem / 1.1 var(--fonte);
+  cursor: pointer;
+  box-shadow: 0 0.3rem 1rem rgba(30, 0, 10, 0.26);
+  transition: filter 0.15s ease, transform 0.15s ease;
+}
+.botao--destaque { background: linear-gradient(150deg, #f1c879, #c58b31); color: #39121d; }
+.botao--perigo { background: linear-gradient(150deg, #a83847, #6b1529); }
+.botao:hover,
+.botao:focus-visible { filter: brightness(1.11); transform: translateY(-0.15rem); }
+.botao:focus-visible { outline: 0.25rem solid var(--latao-claro); outline-offset: 0.25rem; }
+.botao:disabled { opacity: 0.5; cursor: wait; }
+.botao[hidden], .catalogo-info p[hidden] { display: none; }
+
+@media (max-width: 700px) {
+  .cartao--catalogo,
+  .cartao--formulario,
+  .cartao--exclusao {
+    width: min(57rem, calc(100vw - 2.6rem));
+    height: min(72rem, calc(100dvh - 2.6rem));
+    padding: 1.5rem;
+  }
+  .cartao--catalogo .titulo h1,
+  .cartao--formulario .titulo h1,
+  .cartao--exclusao .titulo h1 { font-size: 2.85rem; }
+  .campo label, .campo legend, .campo--opcoes__titulo { font-size: 2.2rem; }
+  .ficha-livro dl > div { flex-wrap: wrap; gap: 0.2rem 0.5rem; }
+}
+
+/* ========================================================================
+   Ações avançadas: pesquisa por autor, PROCEDURE e submenu de JOINs
+   ======================================================================== */
+.cartao--autor, .cartao--join-resultado { gap: 1.1rem; }
+.cartao--autor .titulo h1, .cartao--join-resultado .titulo h1 { font-size: 2.9rem; }
+.formulario-consulta {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding: 1.05rem;
+  border-radius: 1.8rem;
+  background: var(--painel-fundo);
+}
+.formulario-consulta .campo { padding: 0.8rem 1.1rem; }
+.formulario-consulta .campo label { font-size: 2.2rem; }
+.formulario-consulta .campo input[type="text"] { height: 4.25rem; }
+.formulario-consulta .botao { min-height: 4.2rem; }
+.resumo-consulta {
+  flex: none;
+  margin: 0;
+  padding: 0.5rem 0.9rem;
+  color: var(--titulo-texto);
+  font-size: 1.85rem;
+  line-height: 1.25;
+}
+.cartao--joins {
+  width: 51rem;
+  height: min(65rem, calc(100dvh - 2.4rem));
+  min-height: 0;
+  gap: 1.7rem;
+}
+.cartao--joins .titulo h1 { font-size: 3.2rem; }
+.painel--joins { padding: 1.5rem; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--latao-escuro) transparent; }
+.lista--joins { gap: 1.2rem; }
+.item--join { min-height: 7.0rem; }
+.item--join .item__texto { font-size: 2.7rem; line-height: 1.05; }
+.item--join .item__texto small { display: block; margin-top: 0.4rem; font-size: 1.5rem; font-weight: 400; opacity: 0.75; }
+.ficha-join dl { display: flex; flex-direction: column; gap: 0.5rem; margin: 0; }
+.ficha-join dl > div { display: flex; gap: 0.75rem; font-size: 1.95rem; line-height: 1.25; flex-wrap: wrap; overflow-wrap: anywhere; }
+.ficha-join dt { font-weight: 600; }
+.ficha-join dd { margin: 0; }
+@media (max-width: 700px) {
+  .cartao--autor, .cartao--join-resultado, .cartao--joins {
+    width: min(57rem, calc(100vw - 2.6rem));
+    height: min(72rem, calc(100dvh - 2.6rem));
+    padding: 1.5rem;
+  }
+  .cartao--autor .titulo h1, .cartao--join-resultado .titulo h1 { font-size: 2.5rem; }
+  .cartao--joins .titulo h1 { font-size: 2.8rem; }
+}
+
+/* Título mais longo somente quando o cadastro reutiliza a tela via PROCEDURE. */
+.cartao--formulario .titulo h1.titulo-cadastro--procedure { font-size: 2.65rem; text-align: center; line-height: 1.05; padding: 0 0.6rem; }
+@media (max-width: 700px) {
+  .cartao--formulario .titulo h1.titulo-cadastro--procedure { font-size: 2.35rem; }
+}
+
+/* ========================================================================
+   Ações avançadas: relatório estatístico por gênero e busca no catálogo.
+   Os dados exibidos são os campos realmente retornados pelas consultas SQL.
+   ======================================================================== */
+.cartao--relatorio, .cartao--busca-catalogo { gap: 1.1rem; }
+.cartao--relatorio .titulo h1, .cartao--busca-catalogo .titulo h1 { font-size: 2.9rem; text-align: center; }
+.cartao--relatorio .campo small, .cartao--busca-catalogo .campo small {
+  font-size: 1.6rem;
+  line-height: 1.2;
+}
+.formulario-consulta .campo input[type="number"] { height: 4.25rem; }
+.ficha-genero h2, .ficha-catalogo-busca h2 {
+  margin: 0 0 1rem;
+  color: var(--linha-texto);
+  font-size: 2.55rem;
+  font-weight: 600;
+  line-height: 1.12;
+  overflow-wrap: anywhere;
+}
+.ficha-genero__metricas {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+.ficha-genero__metrica {
+  display: flex !important;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  min-width: 0;
+  padding: 0.8rem 0.55rem;
+  border: 0.1rem solid rgba(113, 51, 55, 0.2);
+  border-radius: 0.9rem;
+  background: rgba(104, 36, 53, 0.09);
+  text-align: center;
+}
+.ficha-genero__metrica dt {
+  margin-bottom: 0.45rem;
+  font-size: 1.55rem;
+  font-weight: 500;
+  line-height: 1.1;
+}
+.ficha-genero__metrica dd {
+  margin: 0;
+  font-size: 2.5rem;
+  line-height: 1.2;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.ficha-catalogo-busca__rotulo {
+  margin: 0 0 0.4rem;
+  font-size: 1.45rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #804b55;
+}
+.ficha-catalogo-busca dl { display: grid; gap: 0.55rem; }
+.ficha-catalogo-busca dl > div { line-height: 1.27; font-size: 1.8rem; }
+.ficha-catalogo-busca dt { font-size: 1.8rem; }
+@media (max-width: 700px) {
+  .cartao--relatorio, .cartao--busca-catalogo {
+    width: min(57rem, calc(100vw - 2.6rem));
+    height: min(72rem, calc(100dvh - 2.6rem));
+    padding: 1.5rem;
+  }
+  .cartao--relatorio .titulo h1, .cartao--busca-catalogo .titulo h1 { font-size: 2.65rem; }
+  .ficha-genero__metricas { gap: 0.4rem; }
+  .ficha-genero__metrica { padding: 0.7rem 0.25rem; }
+  .ficha-genero__metrica dt { font-size: 1.35rem; }
+  .ficha-genero__metrica dd { font-size: 2.1rem; }
+}
+
+/* ========================================================================
+   Ações avançadas: estantes vazias, análise crítica e autores distintos.
+   Mantém vidro bordô, cartões creme e alças de rolagem em latão.
+   ======================================================================== */
+.cartao--estantes-vazias,
+.cartao--acervo-critico,
+.cartao--autores-unicos { gap: 1.1rem; }
+.cartao--estantes-vazias .titulo h1,
+.cartao--acervo-critico .titulo h1,
+.cartao--autores-unicos .titulo h1 {
+  font-size: 2.9rem;
+  text-align: center;
+}
+.cartao--acervo-critico .formulario-consulta .campo { gap: 0.45rem; }
+.cartao--acervo-critico .formulario-consulta .campo small {
+  font-size: 1.5rem;
+  line-height: 1.18;
+}
+.ficha-estante h2,
+.ficha-acervo-critico h2,
+.ficha-autor-unico h2 {
+  margin: 0 0 0.65rem;
+  color: var(--linha-texto);
+  font-size: 2.55rem;
+  font-weight: 600;
+  line-height: 1.16;
+  overflow-wrap: anywhere;
+}
+.ficha-estante dl,
+.ficha-acervo-critico dl { display: grid; gap: 0.45rem; margin: 0; }
+.ficha-estante dl > div,
+.ficha-acervo-critico dl > div { font-size: 1.95rem; line-height: 1.25; }
+.ficha-autor-unico { display: flex; align-items: center; gap: 1.2rem; }
+.ficha-autor-unico__icone { flex: none; width: 3.2rem; height: 3.2rem; color: #682435; }
+.ficha-autor-unico h2 { margin: 0; }
+@media (max-width: 700px) {
+  .cartao--estantes-vazias,
+  .cartao--acervo-critico,
+  .cartao--autores-unicos {
+    width: min(57rem, calc(100vw - 2.6rem));
+    height: min(72rem, calc(100dvh - 2.6rem));
+    padding: 1.5rem;
+  }
+  .cartao--estantes-vazias .titulo h1,
+  .cartao--acervo-critico .titulo h1,
+  .cartao--autores-unicos .titulo h1 { font-size: 2.65rem; }
+}
+
+/* ========================================================================
+   Ações avançadas finais: BETWEEN (faixa) e INTERSECT (autores multigênero).
+   Os cartões seguem os componentes existentes e nunca simulam dados reais.
+   ======================================================================== */
+.cartao--faixa-exemplares,
+.cartao--autores-multigenero { gap: 1.1rem; }
+.cartao--faixa-exemplares .titulo h1,
+.cartao--autores-multigenero .titulo h1 {
+  font-size: 2.65rem;
+  text-align: center;
+  line-height: 1.12;
+}
+.campos-em-linha {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+.campos-em-linha .campo { min-width: 0; gap: 0.6rem; }
+.campos-em-linha .campo label { font-size: 1.85rem; line-height: 1.1; }
+.campos-em-linha .campo input { min-width: 0; }
+.formulario-consulta__dica {
+  margin: 0;
+  padding: 0.1rem 0.65rem;
+  color: #fff0de;
+  font-size: 1.65rem;
+  line-height: 1.24;
+}
+.cartao--autores-multigenero .formulario-consulta .campo { gap: 0.45rem; }
+.ficha-faixa h2 {
+  margin: 0 0 0.7rem;
+  color: var(--linha-texto);
+  font-size: 2.55rem;
+  line-height: 1.15;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.ficha-faixa dl { display: grid; gap: 0.5rem; }
+.ficha-faixa dl > div { line-height: 1.2; font-size: 1.95rem; }
+@media (max-width: 700px) {
+  .cartao--faixa-exemplares,
+  .cartao--autores-multigenero {
+    width: min(57rem, calc(100vw - 2.6rem));
+    height: min(72rem, calc(100dvh - 2.6rem));
+    padding: 1.5rem;
+  }
+  .cartao--faixa-exemplares .titulo h1,
+  .cartao--autores-multigenero .titulo h1 { font-size: 2.45rem; }
+  .campos-em-linha .campo label { font-size: 1.75rem; }
+  .formulario-consulta__dica { font-size: 1.5rem; }
+}
