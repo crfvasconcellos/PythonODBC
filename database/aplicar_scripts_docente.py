@@ -32,7 +32,7 @@ def aplicar_scripts():
         ("06_consultas_cap3.sql", "DDL/DML Avançadas e Visões do Capítulo 3"),
     ]
     
-    sql_dir = "sql"
+    sql_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "scripts")
     for arquivo, _ in scripts:
         caminho = os.path.join(sql_dir, arquivo)
         if not os.path.exists(caminho):

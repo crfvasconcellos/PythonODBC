@@ -22,7 +22,7 @@ from dotenv import find_dotenv, load_dotenv
 
 load_dotenv(find_dotenv(filename=".env", usecwd=True))
 
-PASTA_FRONT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Interface-biblioteca")
+PASTA_FRONT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 PREFIXO = "/api"
 
 
@@ -452,8 +452,9 @@ def garantir_rotinas():
             print(f"Aviso: não foi possível criar rotina no banco: {e}")
 
 
-def main():
-    porta = int(sys.argv[1]) if len(sys.argv) > 1 else 8000
+def main(porta=None):
+    if porta is None:
+        porta = int(sys.argv[1]) if len(sys.argv) > 1 and sys.argv[1].isdigit() else 8000
     garantir_rotinas()
     servidor = ThreadingHTTPServer(("127.0.0.1", porta), Manipulador)
     print(f"Biblioteca rodando em http://127.0.0.1:{porta}  (API em {PREFIXO})")
