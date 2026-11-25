@@ -33,8 +33,7 @@ def get_connection() -> pyodbc.Connection:
         f"UID={user};"
         f"PWD={password};"
     )
-    conn = pyodbc.connect(conn_str, timeout=10)
-    conn.autocommit = False  # Controle manual de transação obrigatório
+    conn = pyodbc.connect(conn_str, autocommit=False, timeout=10)
     return conn
 
 

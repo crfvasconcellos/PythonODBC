@@ -11,6 +11,7 @@ from src.services import (
     programacao_banco,
     metadados,
 )
+from src.avaliacao import ddl_integridade
 
 
 def _exibir_tabela(registros: list[dict] | None, titulo: str) -> None:
@@ -206,6 +207,43 @@ def _menu_programacao_metadados():
             _exibir_tabela(metadados.inspecionar_colunas_tabela(tabela), f"Metadados: Colunas de {tabela}")
 
 
+def _menu_ddl_integridade():
+    while True:
+        print("\n--- [Módulo 7] Avaliação: DDL e Restrições de Integridade (Cap. 1-4) ---")
+        print("1. Executar bateria completa (todos os 8 itens de DDL)")
+        print("2. PK Simples e PK Composta (livro_tag)")
+        print("3. FK: Relacionamentos 1:1, 1:N e N:M")
+        print("4. FK: ON UPDATE CASCADE e ON DELETE CASCADE")
+        print("5. FK: ON DELETE SET NULL e ON DELETE SET DEFAULT")
+        print("6. UNIQUE e NOT NULL")
+        print("7. CHECK de Faixa e CHECK com Lista (IN)")
+        print("8. Valores Padrão (DEFAULT)")
+        print("9. ALTER TABLE ADD / DROP COLUMN")
+        print("0. Voltar")
+        op = input("Escolha: ").strip()
+        if op == "0":
+            break
+        elif op == "1":
+            for item in ddl_integridade.executar_bateria_completa_ddl():
+                print(f"[{item['status']}] {item['conceito']} -> {item['detalhes']}")
+        elif op == "2":
+            print(ddl_integridade.demonstrar_pk_simples_e_composta())
+        elif op == "3":
+            print(ddl_integridade.demonstrar_fk_1_1_1_n_n_m())
+        elif op == "4":
+            print(ddl_integridade.demonstrar_acoes_cascata())
+        elif op == "5":
+            print(ddl_integridade.demonstrar_set_null_e_set_default())
+        elif op == "6":
+            print(ddl_integridade.demonstrar_unique_e_not_null())
+        elif op == "7":
+            print(ddl_integridade.demonstrar_check_faixa_e_lista())
+        elif op == "8":
+            print(ddl_integridade.demonstrar_valores_default())
+        elif op == "9":
+            print(ddl_integridade.demonstrar_alter_table_add_drop())
+
+
 def iniciar_menu_console() -> None:
     """Loop principal do centralizador categorizado por capítulos."""
     while True:
@@ -218,6 +256,7 @@ def iniciar_menu_console() -> None:
         print("4. Consultas Avançadas -> Subconsultas/CTE  [Cap. 3]")
         print("5. Consultas Avançadas -> Junções e Visões  [Cap. 4]")
         print("6. Programação no Banco e Metadados ODBC    [Cap. 5 e 8]")
+        print("7. Avaliação: DDL e Restrições Integridade  [Cap. 1 a 4]")
         print("0. Sair")
 
         opcao = input("\nEscolha uma categoria: ").strip()
@@ -233,6 +272,8 @@ def iniciar_menu_console() -> None:
             _menu_juncoes_visoes()
         elif opcao == "6":
             _menu_programacao_metadados()
+        elif opcao == "7":
+            _menu_ddl_integridade()
         elif opcao == "0":
             print("Encerrando aplicação.")
             break
