@@ -7,28 +7,28 @@
 
   /* ------------------------------------------------------------------------
      1. FUNDO EM CARROSSEL
-     Para incluir mais fotos, coloque o arquivo em img/fundos/ e acrescente
+     Para incluir mais fotos, coloque o arquivo em imgs/fundos/ e acrescente
      o caminho na lista abaixo.
      ------------------------------------------------------------------------ */
   const FUNDOS = [
-    'img/fundos/fundo-01.jpg',
-    'img/fundos/fundo-02.jpg',
-    'img/fundos/fundo-03.jpg',
-    'img/fundos/fundo-04.jpg',
-    'img/fundos/fundo-05.jpg',
-    'img/fundos/fundo-06.jpg',
-    'img/fundos/fundo-07.jpg',
-    'img/fundos/fundo-08.jpg',
-    'img/fundos/fundo-09.jpg',
-    'img/fundos/fundo-10.jpg',
-    'img/fundos/fundo-11.jpg',
-    'img/fundos/fundo-12.jpg',
-    'img/fundos/fundo-13.jpg',
-    'img/fundos/fundo-14.jpg',
-    'img/fundos/fundo-15.jpg',
-    'img/fundos/fundo-16.jpg',
-    'img/fundos/fundo-17.jpg',
-    'img/fundos/fundo-18.jpg',
+    'imgs/fundos/fundo-01.jpg',
+    'imgs/fundos/fundo-02.jpg',
+    'imgs/fundos/fundo-03.jpg',
+    'imgs/fundos/fundo-04.jpg',
+    'imgs/fundos/fundo-05.jpg',
+    'imgs/fundos/fundo-06.jpg',
+    'imgs/fundos/fundo-07.jpg',
+    'imgs/fundos/fundo-08.jpg',
+    'imgs/fundos/fundo-09.jpg',
+    'imgs/fundos/fundo-10.jpg',
+    'imgs/fundos/fundo-11.jpg',
+    'imgs/fundos/fundo-12.jpg',
+    'imgs/fundos/fundo-13.jpg',
+    'imgs/fundos/fundo-14.jpg',
+    'imgs/fundos/fundo-15.jpg',
+    'imgs/fundos/fundo-16.jpg',
+    'imgs/fundos/fundo-17.jpg',
+    'imgs/fundos/fundo-18.jpg',
   ];
   const INTERVALO_MS = 9000; // tempo que cada foto fica na tela
   const FADE_MS = 1800;      // duração da transição entre fotos (igual ao transition do CSS)
@@ -198,7 +198,8 @@
      HTTP de sucesso. Os endpoints acima são um contrato SUGERIDO para a futura API.
      Isso não equivale a gravar no PostgreSQL e não é uma API funcional.
      ------------------------------------------------------------------------ */
-  const API_BASE_URL = ''; // Ex.: 'http://localhost:8000/api' (configure após criar a API)
+  // API servida por api.py (mesma origem). Se abrir o HTML direto do disco, usa localhost:8000.
+  const API_BASE_URL = location.protocol === 'file:' ? 'http://127.0.0.1:8000/api' : '/api';
   const CHAVE_PENDENCIAS = 'biblioteca_operacoes_pendentes_v1';
   const listaLivros = document.getElementById('lista-livros');
   const modeloLivro = document.getElementById('modelo-livro');
