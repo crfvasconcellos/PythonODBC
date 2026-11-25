@@ -71,18 +71,24 @@ INSERT INTO categorias_acervo (id_categoria, nome) VALUES
 (3, 'Ciências e Tecnologia'),
 (4, 'Raridades Históricas');
 
+-- 9b. Inserindo Editoras (usadas no ON DELETE RESTRICT em livros)
+INSERT INTO editoras (nome) VALUES
+('Companhia das Letras'),
+('Editora Record'),
+('O''Reilly Media');
+
 -- 10. Inserindo Livros
-INSERT INTO livros (nome, numero_de_exemplares, pode_ser_emprestado, autor, genero, id_estante, id_categoria, codigo_patrimonio, status_conservacao) VALUES
-('Dom Casmurro', 15, TRUE, 'Machado de Assis', 'Romance Clássico', 3, 2, 'PAT-0001', 'Bom'),
-('Memórias Póstumas de Brás Cubas', 10, TRUE, 'Machado de Assis', 'Romance Clássico', 3, 2, 'PAT-0002', 'Novo'),
-('1984', 25, TRUE, 'George Orwell', 'Ficção Científica', 1, 2, 'PAT-0003', 'Bom'),
-('A Revolução dos Bichos', 20, TRUE, 'George Orwell', 'Ficção Científica', 1, 2, 'PAT-0004', 'Bom'),
-('O Capital no Século XXI', 8, TRUE, 'Thomas Piketty', 'Filosofia e Sociologia', 5, 1, 'PAT-0005', 'Novo'),
-('Primeira Edição Carta de Pero Vaz de Caminha', 1, FALSE, 'Pero Vaz de Caminha', 'Obras Raras Séc. XIX', 4, 4, 'PAT-0006', 'Regular'),
-('Manuscrito Histórico Imperial', 2, FALSE, 'D. Pedro II', 'Manuscritos', 4, 4, 'PAT-0007', 'Danificado'),
-('Clean Code', 12, TRUE, 'Robert C. Martin', 'Tecnologia e Informática', 6, 3, 'PAT-0008', 'Novo'),
-('Design Patterns', 10, TRUE, 'Erich Gamma et al.', 'Tecnologia e Informática', 6, 3, 'PAT-0009', 'Bom'),
-('Cem Anos de Solidão', 18, TRUE, 'Gabriel García Márquez', 'Literatura Brasileira', 3, 2, 'PAT-0010', 'Bom');
+INSERT INTO livros (nome, numero_de_exemplares, pode_ser_emprestado, autor, genero, id_estante, id_categoria, id_editora, codigo_patrimonio, status_conservacao) VALUES
+('Dom Casmurro', 15, TRUE, 'Machado de Assis', 'Romance Clássico', 3, 2, 1, 'PAT-0001', 'Bom'),
+('Memórias Póstumas de Brás Cubas', 10, TRUE, 'Machado de Assis', 'Romance Clássico', 3, 2, 1, 'PAT-0002', 'Novo'),
+('1984', 25, TRUE, 'George Orwell', 'Ficção Científica', 1, 2, 1, 'PAT-0003', 'Bom'),
+('A Revolução dos Bichos', 20, TRUE, 'George Orwell', 'Ficção Científica', 1, 2, 1, 'PAT-0004', 'Bom'),
+('O Capital no Século XXI', 8, TRUE, 'Thomas Piketty', 'Filosofia e Sociologia', 5, 1, 2, 'PAT-0005', 'Novo'),
+('Primeira Edição Carta de Pero Vaz de Caminha', 1, FALSE, 'Pero Vaz de Caminha', 'Obras Raras Séc. XIX', 4, 4, 2, 'PAT-0006', 'Regular'),
+('Manuscrito Histórico Imperial', 2, FALSE, 'D. Pedro II', 'Manuscritos', 4, 4, 2, 'PAT-0007', 'Danificado'),
+('Clean Code', 12, TRUE, 'Robert C. Martin', 'Tecnologia e Informática', 6, 3, 3, 'PAT-0008', 'Novo'),
+('Design Patterns', 10, TRUE, 'Erich Gamma et al.', 'Tecnologia e Informática', 6, 3, 3, 'PAT-0009', 'Bom'),
+('Cem Anos de Solidão', 18, TRUE, 'Gabriel García Márquez', 'Literatura Brasileira', 3, 2, 2, 'PAT-0010', 'Bom');
 
 -- 11. Inserindo Tags e Associação N:M (Chave Primária Composta em livro_tag)
 INSERT INTO tags (nome) VALUES

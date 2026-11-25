@@ -16,6 +16,7 @@ DROP TABLE IF EXISTS livro_tag CASCADE;
 DROP TABLE IF EXISTS tags CASCADE;
 DROP TABLE IF EXISTS auditoria_livros_excluidos CASCADE;
 DROP TABLE IF EXISTS livros CASCADE;
+DROP TABLE IF EXISTS editoras CASCADE;
 DROP TABLE IF EXISTS categorias_acervo CASCADE;
 DROP TABLE IF EXISTS estantes CASCADE;
 DROP TABLE IF EXISTS espacos CASCADE;
@@ -123,7 +124,13 @@ CREATE TABLE categorias_acervo (
     nome VARCHAR(80) NOT NULL UNIQUE
 );
 
--- 10. Tabela Livros (NOT NULL, UNIQUE, CHECK faixa + IN, DEFAULT, ON DELETE CASCADE e SET DEFAULT)
+-- 9b. Tabela Editoras (suporte ao ON DELETE RESTRICT em livros)
+CREATE TABLE editoras (
+    id_editora SERIAL PRIMARY KEY,
+    nome VARCHAR(120) NOT NULL UNIQUE
+);
+
+-- 10. Tabela Livros (NOT NULL, UNIQUE, CHECK faixa + IN, DEFAULT, CASCADE, SET DEFAULT e RESTRICT)
 CREATE TABLE livros (
     id_livro SERIAL PRIMARY KEY,
     nome VARCHAR(255) NOT NULL,
@@ -138,7 +145,9 @@ CREATE TABLE livros (
     id_estante INT NOT NULL
         REFERENCES estantes(id_estante) ON DELETE CASCADE ON UPDATE CASCADE,
     id_categoria INT DEFAULT 1
-        REFERENCES categorias_acervo(id_categoria) ON DELETE SET DEFAULT ON UPDATE CASCADE
+        REFERENCES categorias_acervo(id_categoria) ON DELETE SET DEFAULT ON UPDATE CASCADE,
+    id_editora INT
+        REFERENCES editoras(id_editora) ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 -- 11. Tabela Tags (para relacionamento N:M com livros)

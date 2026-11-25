@@ -75,8 +75,8 @@ def _menu_secao_1():
                 ok = bib.excluir_livro(id_l)
                 print("Excluído!" if ok else "Livro não encontrado.")
             elif op == "5":
-                for item in bib.validar_integridade_ddl():
-                    print(f"[{item['status']}] {item['conceito']} -> {item['detalhes']}")
+                for item in bib.testar_parte1_completa():
+                    print(f"[{item['status']}] {item['item']} -> {item['detalhes']}")
         except (ValueError, pyodbc.Error) as e:
             print(f"[ERRO] {e}")
 
@@ -84,33 +84,50 @@ def _menu_secao_1():
 def _menu_secao_2():
     while True:
         print("\n--- [Seção 2] Álgebra Relacional e Buscas (Cap. 2 e 3) ---")
-        print("1. Projeção DISTINCT (Autores únicos)")
-        print("2. Projeção SELECT ALL (Todos os autores com duplicatas)")
-        print("3. Busca no Catálogo (ILIKE, OR, UPPER, SUBSTRING, LENGTH)")
-        print("4. Faixa de Exemplares (BETWEEN, AND, NOT)")
-        print("5. Valores Nulos (IS NULL - Estantes sem domínio lado 2)")
-        print("6. Auto-junção / SELF JOIN (Pares de livros do mesmo autor/gênero)")
+        print("1. Projeção DISTINCT vs ALL e Atributo Calculado")
+        print("2. Seleção Composta (AND/OR/NOT) e Comparação de Tupla")
+        print("3. Produto Cartesiano (|R|x|S|) e Junção Teta")
+        print("4. Renomeação (AS) e Auto-junção / SELF JOIN")
+        print("5. Strings: LIKE (% e _), ||, UPPER() e LOWER()")
+        print("6. Faixa de Exemplares (BETWEEN / NOT BETWEEN)")
+        print("7. Valores Nulos (IS NULL / IS NOT NULL) e ORDER BY NULLS FIRST/LAST")
+        print("8. Executar bateria completa da Parte 2 (todos os 8 itens)")
         print("0. Voltar")
         op = input("Opção: ").strip()
         try:
             if op == "0":
                 break
             elif op == "1":
-                _mostrar(bib.listar_autores_unicos(), "DISTINCT Autores")
+                r = bib.projecao_distinct_all_e_calculo()
+                _mostrar(r["distinct"], "DISTINCT status_conservacao")
+                _mostrar(r["calculados"], "Projeção com Atributo Calculado")
             elif op == "2":
-                _mostrar(bib.listar_autores_todos(), "SELECT ALL Autores")
+                r = bib.selecao_predicados_compostos_e_tupla()
+                _mostrar(r["predicados_compostos"], "Seleção com Predicados Compostos")
+                _mostrar(r["comparacao_tupla"], "Predicado com Tupla")
             elif op == "3":
-                termo = input("Palavra-chave: ").strip()
-                _mostrar(bib.buscar_catalogo_palavra_chave(termo), f"Busca: {termo}")
+                r = bib.produto_cartesiano_e_juncao_teta()
+                print(f"\nProduto Cartesiano: {r['qtd_livros']} x {r['qtd_espacos']} = {r['total_cartesiano']} linhas")
+                _mostrar(r["juncao_teta"], "Junção Teta (WHERE l.id_categoria = c.id_categoria)")
             elif op == "4":
-                mi = int(input("Mínimo: ").strip() or "0")
-                ma = int(input("Máximo: ").strip() or "20")
-                _mostrar(bib.buscar_livros_por_faixa_exemplares(mi, ma), f"Faixa {mi}..{ma}")
-            elif op == "5":
-                _mostrar(bib.listar_estantes_sem_dominio_lado2(), "IS NULL Estantes")
-            elif op == "6":
                 gen = input("Gênero (ex: Romance Clássico): ").strip() or "Romance Clássico"
                 _mostrar(bib.auto_juncao_livros_mesmo_autor_genero(gen), f"SELF JOIN ({gen})")
+            elif op == "5":
+                r = bib.buscar_strings_like_coringa_posicao()
+                _mostrar(r["like_percent"], "LIKE com % + UPPER/LOWER/||")
+                _mostrar(r["like_underline"], "LIKE com _ (PAT-____)")
+            elif op == "6":
+                mi = int(input("Mínimo: ").strip() or "10")
+                ma = int(input("Máximo: ").strip() or "20")
+                negar = input("Usar NOT BETWEEN? (s/N): ").strip().lower() == "s"
+                _mostrar(bib.buscar_livros_por_faixa_exemplares(mi, ma, negar), f"Faixa {mi}..{ma}")
+            elif op == "7":
+                r = bib.consultar_nulos_e_nao_nulos()
+                _mostrar(r["com_nulo"], "IS NULL (sem patrimônio)")
+                _mostrar(bib.ordenar_livros_multiatributo_nulos(True), "ORDER BY ... NULLS FIRST")
+            elif op == "8":
+                for item in bib.testar_parte2_completa():
+                    print(f"[{item['status']}] {item['item']} -> {item['detalhes']}")
         except (ValueError, pyodbc.Error) as e:
             print(f"[ERRO] {e}")
 
@@ -122,9 +139,10 @@ def _menu_secao_3():
         print("2. Subconsulta IN / NOT IN (Livros por tipo de espaço)")
         print("3. Subconsulta Correlacionada EXISTS / NOT EXISTS (Espaços x Estantes)")
         print("4. CTE (WITH) + SOME + Subconsulta no FROM (Acervo crítico)")
-        print("5. UNION (Domínios lado 1 e lado 2)")
-        print("6. INTERSECT (Autores multigênero)")
-        print("7. EXCEPT (Estantes vazias)")
+        print("5. UNION vs UNION ALL (Temas/Domínios)")
+        print("6. INTERSECT vs INTERSECT ALL (Categorias por status)")
+        print("7. EXCEPT vs EXCEPT ALL (Subtração de categorias / estantes vazias)")
+        print("8. Executar bateria completa da Parte 3 (Agregações + Conjuntos 6/6)")
         print("0. Voltar")
         op = input("Opção: ").strip()
         try:
@@ -144,13 +162,20 @@ def _menu_secao_3():
                 gen = input("Gênero de comparação (ex: Romance Clássico): ").strip() or "Romance Clássico"
                 _mostrar(bib.analise_acervo_critico(dom, gen), "CTE + SOME")
             elif op == "5":
-                _mostrar(bib.uniao_dominios_estantes(), "UNION Domínios")
+                r = bib.comparar_union_vs_union_all()
+                print(f"\nUNION: {len(r['union'])} | UNION ALL: {len(r['union_all'])}")
+                _mostrar(r["union"], "UNION Temas")
             elif op == "6":
-                g1 = input("Gênero 1: ").strip()
-                g2 = input("Gênero 2: ").strip()
-                _mostrar(bib.relatorio_autores_multigenero(g1, g2), "INTERSECT Autores")
+                r = bib.comparar_intersect_vs_intersect_all()
+                print(f"\nINTERSECT: {len(r['intersect'])} | INTERSECT ALL: {len(r['intersect_all'])}")
+                _mostrar(r["intersect"], "INTERSECT Categorias")
             elif op == "7":
-                _mostrar(bib.auditoria_estantes_vazias(), "EXCEPT Estantes Vazias")
+                r = bib.comparar_except_vs_except_all()
+                print(f"\nEXCEPT: {len(r['except'])} | EXCEPT ALL: {len(r['except_all'])}")
+                _mostrar(r["except"], "EXCEPT Categorias")
+            elif op == "8":
+                for item in bib.testar_parte3_completa():
+                    print(f"[{item['status']}] {item['item']} -> {item['detalhes']}")
         except (ValueError, pyodbc.Error) as e:
             print(f"[ERRO] {e}")
 
@@ -166,6 +191,7 @@ def _menu_secao_4():
         print("6. Stored Procedure (CALL sp_cadastrar_livro)")
         print("7. Trigger de Auditoria (Consultar biblioteca.auditoria_livros_excluidos)")
         print("8. Consulta Recursiva (WITH RECURSIVE pisos)")
+        print("9. Executar bateria completa da Parte 4 (Subconsultas, CTEs e CASE 8/8)")
         print("0. Voltar")
         op = input("Opção: ").strip()
         try:
@@ -199,6 +225,9 @@ def _menu_secao_4():
                 _mostrar(bib.consultar_auditoria_trigger(), "Auditoria do Trigger AFTER DELETE")
             elif op == "8":
                 _mostrar(bib.consulta_recursiva_pisos(), "WITH RECURSIVE Pisos")
+            elif op == "9":
+                for item in bib.testar_parte4_completa():
+                    print(f"[{item['status']}] {item['item']} -> {item['detalhes']}")
         except (ValueError, pyodbc.Error) as e:
             print(f"[ERRO] {e}")
 
