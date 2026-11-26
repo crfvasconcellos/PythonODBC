@@ -177,6 +177,12 @@ CREATE TABLE biblioteca.auditoria_livros_excluidos (
 );
 
 -- ==============================================================================
+-- ÍNDICES EXPLÍCITOS PARA OTIMIZAÇÃO DE BUSCAS (Cap. 4 / Cap. 14)
+-- ==============================================================================
+CREATE INDEX IF NOT EXISTS idx_livros_nome ON livros (nome);
+CREATE INDEX IF NOT EXISTS idx_livros_id_estante ON livros (id_estante);
+
+-- ==============================================================================
 -- MODIFICAÇÃO DE ESQUEMA (ALTER TABLE ADD COLUMN / DROP COLUMN)
 -- ==============================================================================
 ALTER TABLE livros ADD COLUMN observacao_temporaria VARCHAR(100);

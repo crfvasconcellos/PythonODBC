@@ -29,12 +29,25 @@ def _para_dicts(cursor) -> list[dict]:
 # SEÇÃO 1: CRUD BÁSICO E INTEGRIDADE (Cap. 1 a 4)
 # ==============================================================================
 
-def listar_livros() -> list[dict]:
+def listar_livros(busca: str | None = None) -> list[dict]:
     """
-    [CONCEITO]: CRUD, SELECT, ORDER BY
+    [CONCEITO]: CRUD, SELECT, ORDER BY, ILIKE, PREPARED STATEMENT
     [CAPÍTULO]: Cap. 3
-    [DESCRIÇÃO]: Lista todos os livros cadastrados no schema biblioteca ordenados pelo ID.
+    [DESCRIÇÃO]: Lista todos os livros cadastrados (ou filtrados por título/autor via Prepared Statement).
     """
+    if busca and busca.strip():
+        like = f"%{busca.strip()}%"
+        sql = """
+            SELECT id_livro, nome, autor, genero, numero_de_exemplares,
+                   pode_ser_emprestado, status_conservacao, codigo_patrimonio, id_estante
+            FROM biblioteca.livros
+            WHERE nome ILIKE ? OR autor ILIKE ?
+            ORDER BY id_livro ASC;
+        """
+        with transacao() as cursor:
+            cursor.execute(sql, (like, like))
+            return _para_dicts(cursor)
+
     sql = """
         SELECT id_livro, nome, autor, genero, numero_de_exemplares,
                pode_ser_emprestado, status_conservacao, codigo_patrimonio, id_estante
@@ -55,17 +68,18 @@ def cadastrar_livro(
     id_estante: int,
     codigo_patrimonio: str | None = None,
     status_conservacao: str = "Bom",
-) -> None:
+) -> int:
     """
     [CONCEITO]: CRUD, INSERT, PREPARED STATEMENT, NOT NULL, UNIQUE, CHECK, DEFAULT
     [CAPÍTULO]: Cap. 3 e Cap. 4
-    [DESCRIÇÃO]: Insere novo livro usando Prepared Statement, respeitando restrições de domínio e unicidade.
+    [DESCRIÇÃO]: Insere novo livro usando Prepared Statement, respeitando restrições e retornando o id_livro gerado.
     """
     sql = """
         INSERT INTO biblioteca.livros
             (nome, autor, genero, numero_de_exemplares, pode_ser_emprestado,
              id_estante, codigo_patrimonio, status_conservacao)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        RETURNING id_livro;
     """
     with transacao() as cursor:
         cursor.execute(
@@ -76,6 +90,7 @@ def cadastrar_livro(
                 codigo_patrimonio, status_conservacao,
             ),
         )
+        return int(cursor.fetchone()[0])
 
 
 def atualizar_livro(
@@ -113,6 +128,18 @@ def excluir_livro(id_livro: int) -> bool:
     sql = "DELETE FROM biblioteca.livros WHERE id_livro = ?;"
     with transacao() as cursor:
         cursor.execute(sql, (int(id_livro),))
+        return cursor.rowcount > 0
+
+
+def excluir_editora(id_editora: int) -> bool:
+    """
+    [CONCEITO]: DELETE, ON DELETE RESTRICT, INTEGRIDADE REFERENCIAL
+    [CAPÍTULO]: Cap. 4
+    [DESCRIÇÃO]: Tenta excluir uma editora pelo ID (bloqueado por RESTRICT se houver livros vinculados).
+    """
+    sql = "DELETE FROM biblioteca.editoras WHERE id_editora = ?;"
+    with transacao() as cursor:
+        cursor.execute(sql, (int(id_editora),))
         return cursor.rowcount > 0
 
 
@@ -1420,8 +1447,188 @@ def consulta_recursiva_pisos() -> list[dict]:
 
 
 # ==============================================================================
-# SEÇÃO 5: METADADOS VIA ODBC (Cap. 5)
+# SEÇÃO 5: JUNÇÕES (USING), VISÕES, ÍNDICES, DCL (GRANT/REVOKE) E METADADOS (Cap. 4 e 5)
 # ==============================================================================
+
+def juncao_com_using(min_exemplares: int = 1) -> list[dict]:
+    """
+    [CONCEITO]: INNER JOIN, JOIN USING, JUNCAO INTERNA
+    [CAPÍTULO]: Cap. 4
+    [DESCRIÇÃO]: Une livros e estantes especificando a coluna comum via cláusula USING (id_estante).
+    """
+    sql = """
+        SELECT l.nome AS livro, l.numero_de_exemplares, e.dominio_lado_1, e.tipo
+        FROM biblioteca.livros l
+        INNER JOIN biblioteca.estantes e USING (id_estante)
+        WHERE l.numero_de_exemplares >= ?
+        ORDER BY l.nome ASC;
+    """
+    with transacao() as cursor:
+        cursor.execute(sql, (int(min_exemplares),))
+        return _para_dicts(cursor)
+
+
+def consultar_visoes_convencionais_e_dinamismo() -> dict:
+    """
+    [CONCEITO]: VIEW, VISAO CONVENCIONAL, RECÁLCULO DINAMICO, PG_VIEWS
+    [CAPÍTULO]: Cap. 4
+    [DESCRIÇÃO]: Consome 2 visões convencionais do schema biblioteca e comprova que a VIEW é recalculada
+                 dinamicamente a cada SELECT (sem armazenar dados em disco nem exigir REFRESH).
+    """
+    conn = conectar()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT * FROM biblioteca.vw_livros_localizacao_completa ORDER BY id_livro;")
+        vw1 = _para_dicts(cursor)
+        cursor.execute("SELECT * FROM biblioteca.vw_resumo_estantes_dominio ORDER BY id_estante;")
+        vw2 = _para_dicts(cursor)
+
+        # Prova de recálculo dinâmico: insere livro temporário e consulta a VIEW imediatamente (sem REFRESH)
+        cursor.execute("INSERT INTO biblioteca.livros (nome, autor, genero, id_estante) VALUES (?, ?, ?, ?);", ("Livro Dinamico View", "Autor", "Teste", 1))
+        cursor.execute("SELECT COUNT(*) FROM biblioteca.vw_livros_localizacao_completa;")
+        total_apos_insert = cursor.fetchone()[0]
+        dinamico_ok = total_apos_insert == len(vw1) + 1
+    finally:
+        conn.rollback()
+        cursor.close()
+        conn.close()
+    return {
+        "vw_livros_localizacao_completa": len(vw1),
+        "vw_resumo_estantes_dominio": len(vw2),
+        "recalculo_dinamico_sem_refresh": dinamico_ok,
+    }
+
+
+def inspecionar_indices_schema(schema: str = "biblioteca") -> list[dict]:
+    """
+    [CONCEITO]: INDICES, CREATE INDEX, PG_INDEXES, CATALOGO SGBD
+    [CAPÍTULO]: Cap. 4 e Cap. 14
+    [DESCRIÇÃO]: Consulta o catálogo pg_indexes do PostgreSQL listando índices explícitos e de restrições do schema.
+    """
+    sql = """
+        SELECT tablename AS tabela, indexname AS indice, indexdef AS definicao
+        FROM pg_indexes
+        WHERE schemaname = ?
+        ORDER BY tablename, indexname;
+    """
+    with transacao() as cursor:
+        cursor.execute(sql, (schema,))
+        return _para_dicts(cursor)
+
+
+def demonstrar_dcl_grant_revoke(role_temp: str = "leitor_teste_avaliacao") -> dict:
+    """
+    [CONCEITO]: DCL, CONTROLE DE ACESSO, AUTORIZACAO, CREATE ROLE, GRANT, REVOKE, DROP ROLE
+    [CAPÍTULO]: Cap. 4
+    [DESCRIÇÃO]: Em transação isolada com rollback ao final, cria role temporária, concede GRANT SELECT,
+                 comprova privilégio via has_table_privilege(), executa REVOKE SELECT e descarta a role.
+    """
+    conn = conectar()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(f"CREATE ROLE {role_temp};")
+        cursor.execute(f"GRANT USAGE ON SCHEMA biblioteca TO {role_temp};")
+        cursor.execute(f"GRANT SELECT ON biblioteca.livros TO {role_temp};")
+
+        cursor.execute("SELECT has_table_privilege(?, ?, ?);", (role_temp, "biblioteca.livros", "SELECT"))
+        possui_apos_grant = str(cursor.fetchone()[0]).lower() in ("true", "1", "t")
+
+        cursor.execute(f"REVOKE SELECT ON biblioteca.livros FROM {role_temp};")
+        cursor.execute("SELECT has_table_privilege(?, ?, ?);", (role_temp, "biblioteca.livros", "SELECT"))
+        possui_apos_revoke = str(cursor.fetchone()[0]).lower() in ("true", "1", "t")
+
+        cursor.execute(f"REVOKE USAGE ON SCHEMA biblioteca FROM {role_temp};")
+        cursor.execute(f"DROP ROLE {role_temp};")
+        return {
+            "grant_concedido": possui_apos_grant,
+            "revoke_revogado": not possui_apos_revoke,
+            "role_descartada_com_rollback": True,
+        }
+    finally:
+        conn.rollback()
+        cursor.close()
+        conn.close()
+
+
+def testar_parte5_completa() -> list[dict]:
+    """
+    [CONCEITO]: TESTE PARTE 5, NATURAL JOIN, INNER JOIN, USING, LEFT JOIN, RIGHT JOIN, FULL OUTER JOIN, VIEW, MATERIALIZED VIEW, REFRESH, INDEX, GRANT, REVOKE
+    [CAPÍTULO]: Cap. 4
+    [DESCRIÇÃO]: Executa bateria automatizada para todos os 7 itens da Parte 5 da avaliação.
+    """
+    r1_nat = executar_join("natural")
+    r1_inn = executar_join("inner")
+    r1_use = juncao_com_using(1)
+    ok1 = len(r1_nat) > 0 and len(r1_inn) > 0 and len(r1_use) > 0
+
+    r2_left = executar_join("left")
+    r2_right = executar_join("right")
+    tem_nulo_left = any(row.get("id_estante") is None for row in r2_left)
+    ok2 = len(r2_left) > 0 and tem_nulo_left and len(r2_right) > 0
+
+    r3_full = executar_join("full")
+    tem_nulo_full = any(row.get("id_estante") is None for row in r3_full)
+    ok3 = len(r3_full) > 0 and tem_nulo_full
+
+    r4 = consultar_visoes_convencionais_e_dinamismo()
+    ok4 = (
+        r4["vw_livros_localizacao_completa"] > 0
+        and r4["vw_resumo_estantes_dominio"] > 0
+        and r4["recalculo_dinamico_sem_refresh"]
+    )
+
+    ref_ok = atualizar_visao_materializada("mv_ranking_autores_maior_acervo")
+    r5_mv = consultar_visao_materializada("mv_ranking_autores_maior_acervo")
+    ok5 = ref_ok and len(r5_mv) > 0
+
+    r6_idx = inspecionar_indices_schema("biblioteca")
+    nomes_idx = {i["indice"] for i in r6_idx}
+    ok6 = "idx_livros_nome" in nomes_idx and "idx_livros_id_estante" in nomes_idx
+
+    r7_dcl = demonstrar_dcl_grant_revoke()
+    ok7 = all(r7_dcl.values())
+
+    return [
+        {
+            "item": "1. Junções Naturais e Internas (NATURAL, INNER ON, USING)",
+            "status": "OK" if ok1 else "FALHA",
+            "detalhes": {"natural": len(r1_nat), "inner_on": len(r1_inn), "using": len(r1_use)},
+        },
+        {
+            "item": "2. Junções Externas Parciais (LEFT e RIGHT OUTER JOIN)",
+            "status": "OK" if ok2 else "FALHA",
+            "detalhes": {"left": len(r2_left), "left_com_null": tem_nulo_left, "right": len(r2_right)},
+        },
+        {
+            "item": "3. Junção Externa Completa (FULL OUTER JOIN)",
+            "status": "OK" if ok3 else "FALHA",
+            "detalhes": {"full_linhas": len(r3_full), "preservou_null": tem_nulo_full},
+        },
+        {
+            "item": "4. Visões Convencionais (2 VIEWs + Recálculo Dinâmico)",
+            "status": "OK" if ok4 else "FALHA",
+            "detalhes": r4,
+        },
+        {
+            "item": "5. Visões Materializadas (SELECT + REFRESH MATERIALIZED VIEW)",
+            "status": "OK" if ok5 else "FALHA",
+            "detalhes": {"refresh_ok": ref_ok, "linhas_mv": len(r5_mv)},
+        },
+        {
+            "item": "6. Inspeção de Índices (CREATE INDEX + pg_indexes)",
+            "status": "OK" if ok6 else "FALHA",
+            "detalhes": {
+                "total_indices_schema": len(r6_idx),
+                "indices_explicitos": sorted(n for n in nomes_idx if n.startswith("idx_")),
+            },
+        },
+        {
+            "item": "7. Controle de Acesso DCL (CREATE ROLE, GRANT, REVOKE, DROP)",
+            "status": "OK" if ok7 else "FALHA",
+            "detalhes": r7_dcl,
+        },
+    ]
+
 
 def inspecionar_tabelas_schema(schema: str = "biblioteca") -> list[dict]:
     """
@@ -1452,3 +1659,209 @@ def inspecionar_colunas_tabela(tabela: str, schema: str = "biblioteca") -> list[
             }
             for c in cursor.columns(table=tabela, schema=schema)
         ]
+
+
+# ==============================================================================
+# COMPLEMENTO CAPÍTULO 5: TABLE FUNCTION, TRIGGERS BEFORE/AFTER, OLAP E TESTE PARTE 6
+# ==============================================================================
+
+def chamar_table_function_por_genero(genero: str = "Romance Clássico") -> list[dict]:
+    """
+    [CONCEITO]: TABLE FUNCTION, CREATE FUNCTION, RETURNS TABLE, SELECT FROM FUNCTION
+    [CAPÍTULO]: Cap. 5
+    [DESCRIÇÃO]: Consulta a Table Function biblioteca.fn_listar_livros_por_genero(?) que retorna um conjunto tabular.
+    """
+    sql = "SELECT * FROM biblioteca.fn_listar_livros_por_genero(CAST(? AS VARCHAR));"
+    with transacao() as cursor:
+        cursor.execute(sql, (genero,))
+        return _para_dicts(cursor)
+
+
+def demonstrar_triggers_before_e_after() -> dict:
+    """
+    [CONCEITO]: TRIGGER BEFORE, TRIGGER AFTER, VARIAVEL NEW, VARIAVEL OLD, AUDITORIA
+    [CAPÍTULO]: Cap. 5
+    [DESCRIÇÃO]: Comprova Trigger BEFORE (ajusta NEW.nome e NEW.codigo_patrimonio para maiúsculas e bloqueia título vazio)
+                 e Trigger AFTER DELETE (grava OLD em biblioteca.auditoria_livros_excluidos), com rollback seguro.
+    """
+    conn = conectar()
+    cursor = conn.cursor()
+    try:
+        # 1. Trigger BEFORE (ajuste automático com NEW)
+        cursor.execute(
+            """
+            INSERT INTO biblioteca.livros (nome, autor, genero, numero_de_exemplares, id_estante, codigo_patrimonio)
+            VALUES (?, ?, ?, ?, ?, ?)
+            RETURNING id_livro, nome, codigo_patrimonio;
+            """,
+            ("   Livro Trigger Demo   ", "Autor Trigger", "Teste", 3, 1, "  pat-9999  "),
+        )
+        id_temp, nome_ajustado, pat_ajustado = cursor.fetchone()
+        before_ajuste_ok = (nome_ajustado == "Livro Trigger Demo") and (pat_ajustado == "PAT-9999")
+
+        # 2. Trigger AFTER DELETE (auditoria automática com OLD)
+        cursor.execute("DELETE FROM biblioteca.livros WHERE id_livro = ?;", (id_temp,))
+        cursor.execute(
+            "SELECT COUNT(*) FROM biblioteca.auditoria_livros_excluidos WHERE id_livro_apagado = ?;",
+            (id_temp,),
+        )
+        after_auditoria_ok = cursor.fetchone()[0] == 1
+
+        # 3. Trigger BEFORE bloqueando dado inconsistente (título só com espaços)
+        before_bloqueio_ok = False
+        try:
+            cursor.execute("INSERT INTO biblioteca.livros (nome, id_estante) VALUES (?, ?);", ("     ", 1))
+        except pyodbc.Error:
+            before_bloqueio_ok = True
+            conn.rollback()
+
+        return {
+            "before_ajustou_NEW": before_ajuste_ok,
+            "before_bloqueou_vazio": before_bloqueio_ok,
+            "after_auditou_OLD": after_auditoria_ok,
+        }
+    finally:
+        conn.rollback()
+        cursor.close()
+        conn.close()
+
+
+def olap_window_functions_ranking() -> list[dict]:
+    """
+    [CONCEITO]: OLAP, WINDOW FUNCTIONS, OVER, PARTITION BY, ROW_NUMBER, RANK, DENSE_RANK, SUM OVER
+    [CAPÍTULO]: Cap. 5
+    [DESCRIÇÃO]: Ranqueia livros dentro de cada gênero e calcula soma acumulada via funções de janela.
+    """
+    sql = """
+        SELECT nome,
+               genero,
+               numero_de_exemplares,
+               ROW_NUMBER() OVER (PARTITION BY genero ORDER BY numero_de_exemplares DESC, nome ASC) AS posicao_linha,
+               RANK()       OVER (PARTITION BY genero ORDER BY numero_de_exemplares DESC) AS rank_genero,
+               DENSE_RANK() OVER (PARTITION BY genero ORDER BY numero_de_exemplares DESC) AS dense_rank_genero,
+               SUM(numero_de_exemplares) OVER (PARTITION BY genero) AS total_exemplares_genero
+        FROM biblioteca.livros
+        WHERE genero IS NOT NULL
+        ORDER BY genero ASC, posicao_linha ASC;
+    """
+    with transacao() as cursor:
+        cursor.execute(sql)
+        return _para_dicts(cursor)
+
+
+def olap_agregacao_rollup_cube() -> dict:
+    """
+    [CONCEITO]: OLAP, GROUP BY ROLLUP, GROUP BY CUBE, SUBTOTAIS, TOTAL GERAL
+    [CAPÍTULO]: Cap. 5
+    [DESCRIÇÃO]: Calcula subtotais hierárquicos e total geral em uma única consulta usando ROLLUP e CUBE.
+    """
+    sql_rollup = """
+        SELECT genero,
+               status_conservacao,
+               COUNT(*) AS qtd_livros,
+               SUM(numero_de_exemplares) AS total_exemplares
+        FROM biblioteca.livros
+        WHERE genero IS NOT NULL
+        GROUP BY ROLLUP (genero, status_conservacao)
+        ORDER BY genero NULLS LAST, status_conservacao NULLS LAST;
+    """
+    sql_cube = """
+        SELECT genero,
+               status_conservacao,
+               COUNT(*) AS qtd_livros,
+               SUM(numero_de_exemplares) AS total_exemplares
+        FROM biblioteca.livros
+        WHERE genero IS NOT NULL
+        GROUP BY CUBE (genero, status_conservacao)
+        ORDER BY genero NULLS LAST, status_conservacao NULLS LAST;
+    """
+    with transacao() as cursor:
+        cursor.execute(sql_rollup)
+        rollup = _para_dicts(cursor)
+        cursor.execute(sql_cube)
+        cube = _para_dicts(cursor)
+    return {"rollup": rollup, "cube": cube}
+
+
+def testar_parte6_completa() -> list[dict]:
+    """
+    [CONCEITO]: TESTE PARTE 6, FUNCTION ESCALAR, TABLE FUNCTION, PROCEDURE CALL, TRIGGER BEFORE, TRIGGER AFTER, WITH RECURSIVE, OLAP, WINDOW FUNCTIONS, ROLLUP, CUBE, METADADOS ODBC
+    [CAPÍTULO]: Cap. 5
+    [DESCRIÇÃO]: Executa bateria automatizada para todos os 6 itens da Parte 6 da avaliação com rollback seguro.
+    """
+    # 1. Function Escalar + Table Function
+    r1_esc = consultar_total_por_autor("Machado")
+    r1_tab = chamar_table_function_por_genero("Romance Clássico")
+    ok1 = r1_esc["total"] > 0 and len(r1_tab) > 0
+
+    # 2. Procedure via CALL (em transação isolada com rollback para não deixar lixo)
+    conn = conectar()
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            "CALL sp_cadastrar_livro(CAST(? AS VARCHAR), CAST(? AS VARCHAR), CAST(? AS VARCHAR), CAST(? AS INT), CAST(? AS BOOLEAN), CAST(? AS INT));",
+            ("Livro Procedure Teste", "Autor Proc", "Teste", 4, True, 1),
+        )
+        cur.execute("SELECT COUNT(*) FROM biblioteca.livros WHERE nome = ?;", ("Livro Procedure Teste",))
+        proc_ok = cur.fetchone()[0] == 1
+    finally:
+        conn.rollback()
+        cur.close()
+        conn.close()
+
+    # 3. Triggers BEFORE (NEW) e AFTER (OLD)
+    r3 = demonstrar_triggers_before_e_after()
+    ok3 = all(r3.values())
+
+    # 4. Consulta Recursiva (WITH RECURSIVE)
+    r4 = consulta_recursiva_pisos()
+    ok4 = len(r4) > 0
+
+    # 5. OLAP: Window Functions + ROLLUP / CUBE
+    r5_win = olap_window_functions_ranking()
+    r5_olap = olap_agregacao_rollup_cube()
+    tem_total_geral = any(row["genero"] is None and row["status_conservacao"] is None for row in r5_olap["rollup"])
+    ok5 = len(r5_win) > 0 and tem_total_geral and len(r5_olap["cube"]) >= len(r5_olap["rollup"])
+
+    # 6. Metadados via Catálogo ODBC (cursor.tables e cursor.columns)
+    r6_tabs = inspecionar_tabelas_schema("biblioteca")
+    r6_cols = inspecionar_colunas_tabela("livros", "biblioteca")
+    ok6 = len(r6_tabs) > 0 and len(r6_cols) > 0
+
+    return [
+        {
+            "item": "1. Funções Armazenadas (Escalar + Table Function RETURNS TABLE)",
+            "status": "OK" if ok1 else "FALHA",
+            "detalhes": {"escalar_machado": r1_esc["total"], "table_fn_romance": len(r1_tab)},
+        },
+        {
+            "item": "2. Procedimento Armazenado (CALL sp_cadastrar_livro)",
+            "status": "OK" if proc_ok else "FALHA",
+            "detalhes": {"call_inseriu_e_fez_rollback": proc_ok},
+        },
+        {
+            "item": "3. Gatilhos / Triggers (BEFORE com NEW e AFTER com OLD)",
+            "status": "OK" if ok3 else "FALHA",
+            "detalhes": r3,
+        },
+        {
+            "item": "4. Consulta Recursiva (WITH RECURSIVE)",
+            "status": "OK" if ok4 else "FALHA",
+            "detalhes": {"niveis_percorridos": len(r4)},
+        },
+        {
+            "item": "5. OLAP: Window Functions (RANK/ROW_NUMBER/SUM OVER) + ROLLUP/CUBE",
+            "status": "OK" if ok5 else "FALHA",
+            "detalhes": {
+                "window_linhas": len(r5_win),
+                "rollup_linhas": len(r5_olap["rollup"]),
+                "cube_linhas": len(r5_olap["cube"]),
+                "total_geral_rollup": tem_total_geral,
+            },
+        },
+        {
+            "item": "6. Metadados Dinâmicos ODBC (cursor.tables e cursor.columns)",
+            "status": "OK" if ok6 else "FALHA",
+            "detalhes": {"tabelas_e_views": len(r6_tabs), "colunas_livros": len(r6_cols)},
+        },
+    ]

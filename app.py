@@ -77,6 +77,8 @@ def _menu_secao_1():
             elif op == "5":
                 for item in bib.testar_parte1_completa():
                     print(f"[{item['status']}] {item['item']} -> {item['detalhes']}")
+            else:
+                print("Opção inválida! Tente novamente.")
         except (ValueError, pyodbc.Error) as e:
             print(f"[ERRO] {e}")
 
@@ -128,6 +130,8 @@ def _menu_secao_2():
             elif op == "8":
                 for item in bib.testar_parte2_completa():
                     print(f"[{item['status']}] {item['item']} -> {item['detalhes']}")
+            else:
+                print("Opção inválida! Tente novamente.")
         except (ValueError, pyodbc.Error) as e:
             print(f"[ERRO] {e}")
 
@@ -176,6 +180,8 @@ def _menu_secao_3():
             elif op == "8":
                 for item in bib.testar_parte3_completa():
                     print(f"[{item['status']}] {item['item']} -> {item['detalhes']}")
+            else:
+                print("Opção inválida! Tente novamente.")
         except (ValueError, pyodbc.Error) as e:
             print(f"[ERRO] {e}")
 
@@ -228,15 +234,21 @@ def _menu_secao_4():
             elif op == "9":
                 for item in bib.testar_parte4_completa():
                     print(f"[{item['status']}] {item['item']} -> {item['detalhes']}")
+            else:
+                print("Opção inválida! Tente novamente.")
         except (ValueError, pyodbc.Error) as e:
             print(f"[ERRO] {e}")
 
 
 def _menu_secao_5():
     while True:
-        print("\n--- [Seção 5] Metadados via ODBC (Cap. 5) ---")
+        print("\n--- [Seção 5] Junções, Visões, Índices, DCL e Metadados (Cap. 4 e 5) ---")
         print("1. Listar tabelas e views do schema (cursor.tables)")
         print("2. Listar colunas de uma tabela (cursor.columns)")
+        print("3. Inspecionar índices do schema (pg_indexes)")
+        print("4. Demonstrar DCL (CREATE ROLE, GRANT, REVOKE, DROP com rollback)")
+        print("5. Executar bateria completa da Parte 5 (JOINs, Views, Índices e DCL 7/7)")
+        print("6. Executar bateria completa da Parte 6 (Functions, Procedures, Triggers, OLAP e ODBC 6/6)")
         print("0. Voltar")
         op = input("Opção: ").strip()
         try:
@@ -247,6 +259,18 @@ def _menu_secao_5():
             elif op == "2":
                 tab = input("Nome da tabela (ex: livros): ").strip() or "livros"
                 _mostrar(bib.inspecionar_colunas_tabela(tab), f"Metadados: Colunas de {tab}")
+            elif op == "3":
+                _mostrar(bib.inspecionar_indices_schema(), "Índices (pg_indexes)")
+            elif op == "4":
+                print(bib.demonstrar_dcl_grant_revoke())
+            elif op == "5":
+                for item in bib.testar_parte5_completa():
+                    print(f"[{item['status']}] {item['item']} -> {item['detalhes']}")
+            elif op == "6":
+                for item in bib.testar_parte6_completa():
+                    print(f"[{item['status']}] {item['item']} -> {item['detalhes']}")
+            else:
+                print("Opção inválida! Tente novamente.")
         except pyodbc.Error as e:
             print(f"[ERRO] {e}")
 
@@ -277,7 +301,7 @@ def menu_console():
             print("Encerrado.")
             break
         else:
-            print("Opção inválida.")
+            print("Opção inválida! Tente novamente.")
 
 
 # ==============================================================================
@@ -311,7 +335,37 @@ class _ServidorWeb(SimpleHTTPRequestHandler):
 
     def _corpo(self):
         tam = int(self.headers.get("Content-Length") or 0)
-        return json.loads(self.rfile.read(tam).decode("utf-8")) if tam else {}
+        if tam == 0:
+            return {}
+        dados = json.loads(self.rfile.read(tam).decode("utf-8"))
+        if not isinstance(dados, dict):
+            raise ValueError("O corpo da requisição deve ser um objeto JSON.")
+        return dados
+
+    def _validar_livro(self, c, exigir_estante=True):
+        nome = str(c.get("nome") or c.get("titulo") or "").strip()
+        autor = str(c.get("autor") or "").strip()
+        genero = str(c.get("genero") or "").strip()
+        if not nome or not autor or not genero:
+            raise ValueError("Campos obrigatórios ausentes: nome, autor e genero devem ser preenchidos.")
+        try:
+            ex = int(c.get("numero_de_exemplares"))
+        except (TypeError, ValueError):
+            raise ValueError("Campo 'numero_de_exemplares' deve ser um número inteiro válido.")
+        if ex < 0:
+            raise ValueError("Violação de CHECK: 'numero_de_exemplares' não pode ser negativo.")
+        est = None
+        if exigir_estante:
+            try:
+                est = int(c.get("id_estante"))
+            except (TypeError, ValueError):
+                raise ValueError("Campo 'id_estante' deve ser um número inteiro válido.")
+            if est < 1:
+                raise ValueError("Campo 'id_estante' deve ser maior que zero.")
+        pat = c.get("codigo_patrimonio")
+        pat = str(pat).strip() if pat is not None and str(pat).strip() else None
+        status = str(c.get("status_conservacao") or "Bom").strip()
+        return nome, autor, genero, ex, _bool(c.get("pode_ser_emprestado", True)), est, pat, status
 
     def _api(self, metodo):
         url = urlparse(self.path)
@@ -322,7 +376,7 @@ class _ServidorWeb(SimpleHTTPRequestHandler):
                 if p == ["status"]:
                     return self._json(200, {"api": "ok", "banco": "ok"})
                 if p == ["livros"]:
-                    return self._json(200, bib.listar_livros())
+                    return self._json(200, bib.listar_livros(q("busca") or None))
                 if p == ["livros", "por-autor"]:
                     return self._json(200, bib.consultar_total_por_autor(q("autor")))
                 if p == ["livros", "por-faixa"]:
@@ -344,27 +398,45 @@ class _ServidorWeb(SimpleHTTPRequestHandler):
             elif metodo == "POST":
                 c = self._corpo()
                 if p == ["livros"]:
-                    bib.cadastrar_livro(c["nome"], c["autor"], c["genero"], c["numero_de_exemplares"], _bool(c.get("pode_ser_emprestado", True)), c["id_estante"])
-                    return self._json(201, {"mensagem": "Livro cadastrado."})
+                    nome, autor, genero, ex, emp, est, pat, status = self._validar_livro(c, True)
+                    id_novo = bib.cadastrar_livro(nome, autor, genero, ex, emp, est, pat, status)
+                    return self._json(201, {"mensagem": "Livro cadastrado.", "id_livro": id_novo})
                 if p == ["livros", "procedure"]:
-                    bib.cadastrar_livro_via_procedure(c["nome"], c["autor"], c["genero"], c["numero_de_exemplares"], _bool(c.get("pode_ser_emprestado", True)), c["id_estante"])
+                    nome, autor, genero, ex, emp, est, _, _ = self._validar_livro(c, True)
+                    bib.cadastrar_livro_via_procedure(nome, autor, genero, ex, emp, est)
                     return self._json(201, {"mensagem": "Livro cadastrado via PROCEDURE."})
             elif metodo == "PUT" and len(p) == 2 and p[0] == "livros":
                 c = self._corpo()
-                if not bib.atualizar_livro(int(p[1]), c["nome"], c["autor"], c["genero"], c["numero_de_exemplares"], _bool(c.get("pode_ser_emprestado", True))):
+                nome, autor, genero, ex, emp, _, _, _ = self._validar_livro(c, False)
+                if not bib.atualizar_livro(int(p[1]), nome, autor, genero, ex, emp):
                     return self._json(404, {"erro": "Livro não encontrado."})
                 return self._json(200, {"mensagem": "Livro atualizado."})
             elif metodo == "DELETE" and len(p) == 2 and p[0] == "livros":
                 if not bib.excluir_livro(int(p[1])):
                     return self._json(404, {"erro": "Livro não encontrado."})
                 return self._json(200, {"mensagem": "Livro excluído."})
+            elif metodo == "DELETE" and len(p) == 2 and p[0] == "editoras":
+                if not bib.excluir_editora(int(p[1])):
+                    return self._json(404, {"erro": "Editora não encontrada."})
+                return self._json(200, {"mensagem": "Editora excluída."})
             self._json(404, {"erro": "Rota não encontrada."})
-        except (ValueError, KeyError) as e:
+        except (ValueError, KeyError, TypeError) as e:
             self._json(400, {"erro": str(e)})
         except pyodbc.IntegrityError as e:
-            self._json(409, {"erro": "Violação de integridade.", "detalhe": str(e)})
+            texto = str(e).lower()
+            if "23505" in texto or "unicidade" in texto or "unique" in texto:
+                msg = "Violação de unicidade (UNIQUE): o código/valor informado já está em uso."
+            elif "23503" in texto or "chave estrangeira" in texto or "foreign key" in texto:
+                msg = "Violação de integridade referencial (FK / RESTRICT): registro protegido ou pai inexistente."
+            elif "23514" in texto or "checagem" in texto or "check" in texto:
+                msg = "Violação de regra de domínio (CHECK): valor fora dos permitidos."
+            elif "23502" in texto or "not-null" in texto or "não-nulo" in texto:
+                msg = "Campo obrigatório (NOT NULL) não informado."
+            else:
+                msg = "Violação de integridade no banco de dados."
+            self._json(409, {"erro": msg})
         except pyodbc.Error as e:
-            self._json(503, {"erro": "Erro no banco de dados.", "detalhe": str(e)})
+            self._json(503, {"erro": "Erro ao acessar o banco de dados.", "detalhe": str(e)})
 
     def _eh_api(self):
         c = urlparse(self.path).path
