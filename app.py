@@ -57,6 +57,9 @@ def menu_secao_1():
         print("3. Atualizar livro (UPDATE)")
         print("4. Excluir livro (DELETE + Trigger Auditoria)")
         print("5. Validar todas as restrições DDL (PK, FK, CASCADE, SET NULL/DEFAULT, UNIQUE, CHECK, ALTER)")
+        print("6. Listar estantes disponíveis")
+        print("7. Criar nova estante")
+        print("8. Excluir estante (ATENÇÃO: apaga todos os livros da estante)")
         print("0. Voltar")
 
         opcao = input("Opção: ").strip()
@@ -67,6 +70,12 @@ def menu_secao_1():
                 livros = bib.listar_livros()
                 mostrar_tabela(livros, "Livros Cadastrados")
             elif opcao == "2":
+                estantes = bib.listar_estantes()
+                if estantes:
+                    mostrar_tabela(estantes, "Estantes Disponíveis para Cadastro")
+                else:
+                    print("\n[AVISO] Nenhuma estante cadastrada! Crie uma estante na opção 7 antes de cadastrar livros.")
+
                 nome = input("Título: ").strip()
                 autor = input("Autor: ").strip()
                 genero = input("Gênero: ").strip() or "Geral"
@@ -98,6 +107,28 @@ def menu_secao_1():
             elif opcao == "5":
                 for item in bib.testar_parte1_completa():
                     print(f"[{item['status']}] {item['item']} -> {item['detalhes']}")
+            elif opcao == "6":
+                mostrar_tabela(bib.listar_estantes(), "Estantes Cadastradas")
+            elif opcao == "7":
+                dom1 = input("Domínio Lado 1 (ex: Ficção Científica): ").strip()
+                dom2 = input("Domínio Lado 2 (ex: Romance Clássico): ").strip() or "Geral"
+                cap = int(input("Capacidade de livros (padrão 100): ").strip() or "100")
+                novo_id = bib.cadastrar_estante(dom1, dom2, cap)
+                print(f"Estante criada com sucesso! ID da estante: {novo_id}")
+            elif opcao == "8":
+                mostrar_tabela(bib.listar_estantes(), "Estantes Cadastradas")
+                id_est = int(input("ID da estante para excluir: ").strip())
+                confirma = input(
+                    f"⚠️ ATENÇÃO: Excluir a estante {id_est} apagará TODOS os livros guardados nela! Confirmar? (s/N): "
+                ).strip().lower()
+                if confirma == "s":
+                    res = bib.excluir_estante(id_est)
+                    if res["excluiu"]:
+                        print(f"Estante {id_est} excluída! ({res['livros_removidos']} livro(s) removido(s) junto com ela).")
+                    else:
+                        print("Estante não encontrada.")
+                else:
+                    print("Exclusão cancelada.")
             else:
                 print("Opção inválida! Tente novamente.")
         except (ValueError, pyodbc.Error) as erro:
@@ -498,8 +529,11 @@ class ServidorBiblioteca(SimpleHTTPRequestHandler):
                 if caminho == "/api/autores/unicos":
                     return self.responder_json(200, {"registros": bib.listar_autores_unicos()})
 
+                if caminho == "/api/estantes":
+                    return self.responder_json(200, bib.listar_estantes())
+
             # ------------------------------------------------------------------
-            # ROTAS POST (Cadastro de Livros)
+            # ROTAS POST (Cadastro de Livros e Estantes)
             # ------------------------------------------------------------------
             elif metodo_http == "POST":
                 dados = self.ler_json_recebido()
@@ -514,6 +548,20 @@ class ServidorBiblioteca(SimpleHTTPRequestHandler):
                     bib.cadastrar_livro_via_procedure(nome, autor, genero, ex, emp, est)
                     return self.responder_json(201, {"mensagem": "Livro cadastrado via PROCEDURE."})
 
+                if caminho == "/api/estantes":
+                    dom1 = str(dados.get("dominio_lado_1") or "").strip()
+                    dom2 = str(dados.get("dominio_lado_2") or "Geral").strip() or "Geral"
+                    if not dom1:
+                        raise ValueError("Informe o tema/domínio principal da estante (Domínio Lado 1).")
+                    try:
+                        capacidade = int(dados.get("numero_de_livros") or 100)
+                    except (TypeError, ValueError):
+                        raise ValueError("A capacidade de livros deve ser um número inteiro válido.")
+                    if capacidade < 0:
+                        raise ValueError("A capacidade de livros não pode ser negativa.")
+                    id_estante = bib.cadastrar_estante(dom1, dom2, capacidade)
+                    return self.responder_json(201, {"mensagem": "Estante criada com sucesso.", "id_estante": id_estante})
+
             # ------------------------------------------------------------------
             # ROTAS PUT (Atualização de Livro existente)
             # ------------------------------------------------------------------
@@ -527,13 +575,26 @@ class ServidorBiblioteca(SimpleHTTPRequestHandler):
                 return self.responder_json(200, {"mensagem": "Livro atualizado."})
 
             # ------------------------------------------------------------------
-            # ROTAS DELETE (Exclusão de Livro ou Editora)
+            # ROTAS DELETE (Exclusão de Livro, Estante ou Editora)
             # ------------------------------------------------------------------
             elif metodo_http == "DELETE" and caminho.startswith("/api/livros/"):
                 id_livro = int(caminho.replace("/api/livros/", "").strip("/"))
                 if not bib.excluir_livro(id_livro):
                     return self.responder_json(404, {"erro": "Livro não encontrado."})
                 return self.responder_json(200, {"mensagem": "Livro excluído."})
+
+            elif metodo_http == "DELETE" and caminho.startswith("/api/estantes/"):
+                id_estante = int(caminho.replace("/api/estantes/", "").strip("/"))
+                resultado = bib.excluir_estante(id_estante)
+                if not resultado["excluiu"]:
+                    return self.responder_json(404, {"erro": "Estante não encontrada."})
+                return self.responder_json(
+                    200,
+                    {
+                        "mensagem": "Estante excluída com sucesso.",
+                        "livros_removidos": resultado["livros_removidos"],
+                    },
+                )
 
             elif metodo_http == "DELETE" and caminho.startswith("/api/editoras/"):
                 id_editora = int(caminho.replace("/api/editoras/", "").strip("/"))

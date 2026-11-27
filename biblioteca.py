@@ -143,6 +143,139 @@ def excluir_editora(id_editora: int) -> bool:
         return cursor.rowcount > 0
 
 
+def _garantir_infraestrutura_base_estantes(cursor) -> tuple[int, str]:
+    """Garante que exista ao menos 1 espaço e 1 tipo_de_espaco no banco para vincular novas estantes."""
+    cursor.execute("SELECT id_categoria FROM biblioteca.categorias_acervo WHERE id_categoria = 1;")
+    if not cursor.fetchone():
+        cursor.execute("INSERT INTO biblioteca.categorias_acervo (id_categoria, nome) VALUES (1, 'Geral');")
+
+    cursor.execute("SELECT tipo FROM biblioteca.tipos_de_espaco ORDER BY tipo ASC LIMIT 1;")
+    row_tipo = cursor.fetchone()
+    if row_tipo:
+        tipo_padrao = row_tipo[0]
+    else:
+        tipo_padrao = "Acervo Geral de Livros"
+        cursor.execute(
+            "INSERT INTO biblioteca.tipos_de_espaco (tipo, numero_maximo_de_estantes, eh_privado) VALUES (?, 50, FALSE);",
+            (tipo_padrao,),
+        )
+
+    cursor.execute("SELECT id_espaco FROM biblioteca.espacos ORDER BY id_espaco ASC LIMIT 1;")
+    row_esp = cursor.fetchone()
+    if row_esp:
+        id_espaco_padrao = int(row_esp[0])
+    else:
+        cursor.execute("SELECT id_biblioteca FROM biblioteca.biblioteca ORDER BY id_biblioteca ASC LIMIT 1;")
+        r_bib = cursor.fetchone()
+        if r_bib:
+            id_bib = int(r_bib[0])
+        else:
+            cursor.execute(
+                "INSERT INTO biblioteca.biblioteca (numero_edificacoes, diretoria) VALUES (1, 'Diretoria Central de Acervos') RETURNING id_biblioteca;"
+            )
+            id_bib = int(cursor.fetchone()[0])
+
+        cursor.execute("SELECT id_endereco FROM biblioteca.edificacoes ORDER BY id_endereco ASC LIMIT 1;")
+        r_ed = cursor.fetchone()
+        if r_ed:
+            id_ed = int(r_ed[0])
+        else:
+            cursor.execute(
+                "INSERT INTO biblioteca.edificacoes (endereco, telefone, id_biblioteca) VALUES ('Prédio Principal', '(11) 3222-1000', ?) RETURNING id_endereco;",
+                (id_bib,),
+            )
+            id_ed = int(cursor.fetchone()[0])
+
+        cursor.execute("SELECT id_pisos FROM biblioteca.pisos ORDER BY id_pisos ASC LIMIT 1;")
+        r_piso = cursor.fetchone()
+        if r_piso:
+            id_piso = int(r_piso[0])
+        else:
+            cursor.execute(
+                "INSERT INTO biblioteca.pisos (capacidade_maxima, numero_de_espacos, id_endereco) VALUES (500, 4, ?) RETURNING id_pisos;",
+                (id_ed,),
+            )
+            id_piso = int(cursor.fetchone()[0])
+
+        cursor.execute(
+            "INSERT INTO biblioteca.espacos (numero_de_espacos, id_pisos) VALUES (4, ?) RETURNING id_espaco;",
+            (id_piso,),
+        )
+        id_espaco_padrao = int(cursor.fetchone()[0])
+
+    return id_espaco_padrao, tipo_padrao
+
+
+def listar_estantes() -> list[dict]:
+    """
+    [CONCEITO]: CRUD ESTANTES, SELECT, LEFT JOIN, COUNT, GROUP BY
+    [CAPÍTULO]: Cap. 3 e Cap. 4
+    [DESCRIÇÃO]: Lista todas as estantes cadastradas com seus domínios e a quantidade de livros armazenados.
+    """
+    sql = """
+        SELECT e.id_estante,
+               e.dominio_lado_1,
+               e.dominio_lado_2,
+               e.numero_de_livros AS capacidade_livros,
+               e.tipo,
+               e.id_espaco,
+               COUNT(l.id_livro) AS qtd_livros_cadastrados
+        FROM biblioteca.estantes e
+        LEFT JOIN biblioteca.livros l ON l.id_estante = e.id_estante
+        GROUP BY e.id_estante, e.dominio_lado_1, e.dominio_lado_2, e.numero_de_livros, e.tipo, e.id_espaco
+        ORDER BY e.id_estante ASC;
+    """
+    with transacao() as cursor:
+        cursor.execute(sql)
+        return _para_dicts(cursor)
+
+
+def cadastrar_estante(
+    dominio_lado_1: str,
+    dominio_lado_2: str = "Geral",
+    numero_de_livros: int = 100,
+) -> int:
+    """
+    [CONCEITO]: CRUD ESTANTES, INSERT, PREPARED STATEMENT, FOREIGN KEY
+    [CAPÍTULO]: Cap. 3 e Cap. 4
+    [DESCRIÇÃO]: Cadastra uma nova estante no banco de dados garantindo a estrutura física base (espaço/tipo).
+    """
+    with transacao() as cursor:
+        id_espaco, tipo = _garantir_infraestrutura_base_estantes(cursor)
+        sql = """
+            INSERT INTO biblioteca.estantes
+                (dominio_lado_1, dominio_lado_2, numero_de_livros, id_espaco, tipo)
+            VALUES (?, ?, ?, ?, ?)
+            RETURNING id_estante;
+        """
+        cursor.execute(
+            sql,
+            (
+                dominio_lado_1.strip(),
+                (dominio_lado_2 or "Geral").strip(),
+                int(numero_de_livros),
+                id_espaco,
+                tipo,
+            ),
+        )
+        return int(cursor.fetchone()[0])
+
+
+def excluir_estante(id_estante: int) -> dict:
+    """
+    [CONCEITO]: CRUD ESTANTES, DELETE, ON DELETE CASCADE
+    [CAPÍTULO]: Cap. 3 e Cap. 4
+    [DESCRIÇÃO]: Remove uma estante pelo id_estante (apagando em cascata todos os livros vinculados a ela).
+    """
+    with transacao() as cursor:
+        cursor.execute("SELECT COUNT(*) FROM biblioteca.livros WHERE id_estante = ?;", (int(id_estante),))
+        livros_vinculados = int(cursor.fetchone()[0])
+
+        cursor.execute("DELETE FROM biblioteca.estantes WHERE id_estante = ?;", (int(id_estante),))
+        excluiu = cursor.rowcount > 0
+        return {"excluiu": excluiu, "livros_removidos": livros_vinculados if excluiu else 0}
+
+
 def validar_colunas_ddl_alter_table(tabela: str = "livros", colunas_esperadas: tuple = ("codigo_isbn", "valor_seguro")) -> dict:
     """
     [CONCEITO]: ALTER TABLE, METADADOS, CURSOR.COLUMNS, DDL

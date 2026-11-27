@@ -120,13 +120,14 @@
     autoresUnicos: document.getElementById('tela-autores-unicos'),
     faixaExemplares: document.getElementById('tela-faixa-exemplares'),
     autoresMultigenero: document.getElementById('tela-autores-multigenero'),
+    estantes: document.getElementById('tela-estantes'),
   };
 
   let atualizarSliders = () => {};
 
   function mostrarTela(nome) {
     for (const [chave, elemento] of Object.entries(telas)) {
-      elemento.hidden = chave !== nome;
+      if (elemento) elemento.hidden = chave !== nome;
     }
     if (nome === 'avancada') document.getElementById('lista-avancada').scrollTop = 0;
     if (nome === 'listagem') document.getElementById('lista-livros').scrollTop = 0;
@@ -139,6 +140,7 @@
     if (nome === 'autoresUnicos') document.getElementById('lista-autores-unicos').scrollTop = 0;
     if (nome === 'faixaExemplares') document.getElementById('lista-faixa-exemplares').scrollTop = 0;
     if (nome === 'autoresMultigenero') document.getElementById('lista-autores-multigenero').scrollTop = 0;
+    if (nome === 'estantes') document.getElementById('lista-gerenciar-estantes').scrollTop = 0;
     atualizarSliders();
     requestAnimationFrame(atualizarSliders);
     // leva o foco para o título da nova tela (leitores de tela anunciam a mudança)
@@ -519,6 +521,9 @@
       botao.disabled = true;
       const resultado = await enviarPendencia(operacao);
       mensagemFormulario(tipo, resultado.texto, resultado.estado);
+      if (tipo === 'cadastro' || tipo === 'cadastro_procedure') {
+        carregarOpcoesEstantesNoSelect();
+      }
       botao.disabled = false;
     }
   }
@@ -568,6 +573,41 @@
     dominio_lado_2: 'Domínio lado 2'
   };
 
+  async function carregarOpcoesEstantesNoSelect() {
+    const selectEstante = document.getElementById('cadastro-estante');
+    const ajuda = document.getElementById('ajuda-estante-cadastro');
+    if (!selectEstante) return;
+    try {
+      const base = API_BASE_URL.replace(/\/$/, '');
+      const resp = await fetch(`${base}/estantes`, { headers: { Accept: 'application/json' } });
+      if (!resp.ok) throw new Error('Falha ao buscar estantes');
+      const estantes = await resp.json();
+      selectEstante.innerHTML = '';
+      if (!Array.isArray(estantes) || estantes.length === 0) {
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = 'Nenhuma estante cadastrada — Crie uma em "Criar / Remover Estante"';
+        selectEstante.appendChild(opt);
+        if (ajuda) {
+          ajuda.textContent = '⚠️ Não há estantes no banco! Clique no botão "Criar / Remover Estante" abaixo para criar uma estante primeiro.';
+        }
+        return;
+      }
+      for (const est of estantes) {
+        const opt = document.createElement('option');
+        opt.value = String(est.id_estante);
+        const qtd = Number(est.qtd_livros_cadastrados || 0);
+        opt.textContent = `Estante #${est.id_estante} — ${est.dominio_lado_1} / ${est.dominio_lado_2} (${qtd} livro(s))`;
+        selectEstante.appendChild(opt);
+      }
+      if (ajuda) {
+        ajuda.textContent = `${estantes.length} estante(s) disponível(is) no banco de dados.`;
+      }
+    } catch (erro) {
+      selectEstante.innerHTML = '<option value="">Erro ao carregar estantes da API</option>';
+    }
+  }
+
   function abrirCadastro(viaProcedure) {
     cadastroViaProcedure = viaProcedure;
     const tituloCadastro = document.getElementById('titulo-cadastro');
@@ -575,6 +615,7 @@
       ? 'Cadastrar livro via PROCEDURE' : 'Cadastrar novo livro';
     tituloCadastro.classList.toggle('titulo-cadastro--procedure', viaProcedure);
     mensagemFormulario('cadastro', '');
+    carregarOpcoesEstantesNoSelect();
     mostrarTela('cadastro');
   }
 
@@ -1331,6 +1372,119 @@
     }
   }
 
+  /* ------------------------------------------------------------------------
+     GERENCIAMENTO DE ESTANTES (CRIAR, LISTAR E EXCLUIR COM ALERTA CASCADE)
+     ------------------------------------------------------------------------ */
+  async function carregarTelaGerenciarEstantes() {
+    mostrarTela('estantes');
+    const lista = document.getElementById('lista-gerenciar-estantes');
+    const resumo = document.getElementById('resumo-gerenciar-estantes');
+    mostrarEstado(lista, 'Consultando estantes...', 'Buscando estantes cadastradas no PostgreSQL...');
+    try {
+      const base = API_BASE_URL.replace(/\/$/, '');
+      const resp = await fetch(`${base}/estantes`, { headers: { Accept: 'application/json' } });
+      if (!resp.ok) throw new Error('Falha ao listar estantes');
+      const estantes = await resp.json();
+      if (!Array.isArray(estantes) || estantes.length === 0) {
+        resumo.textContent = 'Nenhuma estante cadastrada no momento. Preencha os campos acima para criar a primeira estante!';
+        mostrarEstado(lista, 'Nenhuma estante cadastrada', 'Use o formulário acima ("+ Criar Nova Estante") para adicionar estantes à biblioteca.');
+        return;
+      }
+      resumo.textContent = `${estantes.length} estante(s) cadastrada(s). ⚠️ Atenção: Apagar uma estante removerá TODOS os livros guardados nela!`;
+      const fragmento = document.createDocumentFragment();
+      for (const est of estantes) {
+        const ficha = document.createElement('article');
+        ficha.className = 'ficha-livro';
+        const qtdLivros = Number(est.qtd_livros_cadastrados || 0);
+        ficha.innerHTML = `
+          <dl>
+            <div><dt>Domínio Lado 1:</dt><dd>${est.dominio_lado_1 || '—'}</dd></div>
+            <div><dt>Domínio Lado 2:</dt><dd>${est.dominio_lado_2 || '—'}</dd></div>
+            <div><dt>Capacidade:</dt><dd>${est.capacidade_livros ?? 100} livros</dd></div>
+            <div><dt>Livros nesta estante:</dt><dd><strong>${qtdLivros} livro(s)</strong></dd></div>
+          </dl>
+          <div style="display:flex; flex-direction:column; align-items:flex-end; gap:0.5rem;">
+            <span class="ficha-livro__id">Estante #${est.id_estante}</span>
+            <button type="button" class="botao botao--perigo" data-excluir-estante="${est.id_estante}" data-tema-estante="${est.dominio_lado_1} / ${est.dominio_lado_2}" data-qtd-livros="${qtdLivros}">
+              Excluir Estante #${est.id_estante}
+            </button>
+          </div>
+        `;
+        fragmento.appendChild(ficha);
+      }
+      lista.replaceChildren(fragmento);
+      atualizarSliders();
+      requestAnimationFrame(atualizarSliders);
+    } catch (erro) {
+      resumo.textContent = 'Não foi possível carregar as estantes da API.';
+      mostrarEstado(lista, 'Erro de conexão', 'Verifique se o servidor Python (python app.py --web) está rodando.');
+    }
+  }
+
+  async function criarNovaEstante(evento) {
+    evento.preventDefault();
+    const form = evento.currentTarget;
+    const fd = new FormData(form);
+    const dominio_lado_1 = String(fd.get('dominio_lado_1') || '').trim();
+    const dominio_lado_2 = String(fd.get('dominio_lado_2') || '').trim();
+    const numero_de_livros = Number(fd.get('numero_de_livros') || 100);
+    const resumo = document.getElementById('resumo-gerenciar-estantes');
+    const botao = document.getElementById('botao-criar-estante');
+    if (!dominio_lado_1 || !dominio_lado_2) {
+      resumo.textContent = 'Preencha os temas dos dois lados da estante.';
+      return;
+    }
+    botao.disabled = true;
+    try {
+      const base = API_BASE_URL.replace(/\/$/, '');
+      const resp = await fetch(`${base}/estantes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ dominio_lado_1, dominio_lado_2, numero_de_livros })
+      });
+      const dados = await resp.json();
+      if (!resp.ok) {
+        resumo.textContent = dados.erro || 'Erro ao criar estante.';
+        return;
+      }
+      form.reset();
+      document.getElementById('estante-capacidade').value = '100';
+      await carregarTelaGerenciarEstantes();
+      resumo.textContent = `✅ Estante #${dados.id_estante} (${dominio_lado_1} / ${dominio_lado_2}) criada com sucesso!`;
+    } catch (erro) {
+      resumo.textContent = 'Erro ao comunicar com o servidor Python.';
+    } finally {
+      botao.disabled = false;
+    }
+  }
+
+  async function confirmarExclusaoEstante(idEstante, tema, qtdLivros) {
+    const aviso =
+      `⚠️ ALERTA DE EXCLUSÃO EM CASCATA!\n\n` +
+      `Você está prestes a apagar a Estante #${idEstante} (${tema}).\n` +
+      `Isso vai apagar permanentemente TODOS os livros cadastrados nessa estante (${qtdLivros} livro(s) vinculado(s))!\n\n` +
+      `Deseja realmente excluir esta estante e todos os livros dela?`;
+    if (!window.confirm(aviso)) return;
+
+    const resumo = document.getElementById('resumo-gerenciar-estantes');
+    try {
+      const base = API_BASE_URL.replace(/\/$/, '');
+      const resp = await fetch(`${base}/estantes/${encodeURIComponent(idEstante)}`, {
+        method: 'DELETE',
+        headers: { Accept: 'application/json' }
+      });
+      const dados = await resp.json();
+      if (!resp.ok) {
+        resumo.textContent = dados.erro || 'Não foi possível excluir a estante.';
+        return;
+      }
+      await carregarTelaGerenciarEstantes();
+      resumo.textContent = `🗑️ Estante #${idEstante} excluída com sucesso (${dados.livros_removidos ?? 0} livro(s) removido(s) junto com ela).`;
+    } catch (erro) {
+      resumo.textContent = 'Erro ao tentar excluir a estante no servidor.';
+    }
+  }
+
   /* Ações do menu e da navegação entre telas. */
   const ACOES = {
     'abrir-avancadas': () => mostrarTela('avancada'),
@@ -1343,6 +1497,7 @@
     'listar-livros':   abrirListagem,
     'cadastrar-livro': () => abrirCadastro(false),
     'cadastrar-via-procedure': () => abrirCadastro(true),
+    'gerenciar-estantes': carregarTelaGerenciarEstantes,
     'total-por-autor': () => mostrarTela('autor'),
     'consultas-join': () => mostrarTela('joins'),
     'estatisticas-genero': () => mostrarTela('relatorioGenero'),
@@ -1358,6 +1513,15 @@
   };
 
   document.addEventListener('click', (evento) => {
+    const botaoExcluirEstante = evento.target.closest('[data-excluir-estante]');
+    if (botaoExcluirEstante) {
+      confirmarExclusaoEstante(
+        botaoExcluirEstante.dataset.excluirEstante,
+        botaoExcluirEstante.dataset.temaEstante,
+        botaoExcluirEstante.dataset.qtdLivros
+      );
+      return;
+    }
     const botao = evento.target.closest('[data-acao]');
     if (!botao) {
       const botaoJoin = evento.target.closest('[data-join]');
@@ -1369,6 +1533,7 @@
   });
 
   document.getElementById('form-cadastro').addEventListener('submit', (e) => salvarFormulario(e, cadastroViaProcedure ? 'cadastro_procedure' : 'cadastro'));
+  document.getElementById('form-criar-estante').addEventListener('submit', criarNovaEstante);
   document.getElementById('form-autor').addEventListener('submit', consultarAutor);
   document.getElementById('form-relatorio-genero').addEventListener('submit', consultarRelatorioGenero);
   document.getElementById('form-busca-catalogo').addEventListener('submit', buscarCatalogoPalavraChave);
@@ -1462,7 +1627,8 @@
     iniciarSlider(document.getElementById('lista-acervo-critico'), document.getElementById('slider-acervo-critico')),
     iniciarSlider(document.getElementById('lista-autores-unicos'), document.getElementById('slider-autores-unicos')),
     iniciarSlider(document.getElementById('lista-faixa-exemplares'), document.getElementById('slider-faixa-exemplares')),
-    iniciarSlider(document.getElementById('lista-autores-multigenero'), document.getElementById('slider-autores-multigenero'))
+    iniciarSlider(document.getElementById('lista-autores-multigenero'), document.getElementById('slider-autores-multigenero')),
+    iniciarSlider(document.getElementById('lista-gerenciar-estantes'), document.getElementById('slider-gerenciar-estantes'))
   ];
   atualizarSliders = () => sliders.forEach((atualizar) => atualizar());
   atualizarAvisoPendencias();

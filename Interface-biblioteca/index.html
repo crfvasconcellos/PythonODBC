@@ -84,6 +84,13 @@
               </button>
             </li>
             <li>
+              <button type="button" class="item" data-acao="gerenciar-estantes">
+                <span class="item__icone" aria-hidden="true"><svg class="icone"><use href="#i-banco"/></svg></span>
+                <span class="item__divisor" aria-hidden="true"></span>
+                <span class="item__texto">Gerenciar estantes (Criar / Remover)</span>
+              </button>
+            </li>
+            <li>
               <button type="button" class="item" data-acao="abrir-avancadas">
                 <span class="item__icone" aria-hidden="true"><svg class="icone"><use href="#i-ajustes"/></svg></span>
                 <span class="item__divisor" aria-hidden="true"></span>
@@ -288,14 +295,17 @@
               </div>
             </div>
             <div class="campo">
-              <label for="cadastro-estante">ID da estante:</label>
-              <input id="cadastro-estante" name="id_estante" type="number" min="1" step="1" required>
-              <small>Obrigatório no banco: o livro deve pertencer a uma estante existente.</small>
+              <label for="cadastro-estante">Selecione a estante:</label>
+              <select id="cadastro-estante" name="id_estante" required>
+                <option value="">Carregando estantes disponíveis...</option>
+              </select>
+              <small id="ajuda-estante-cadastro">Obrigatório no banco: escolha uma estante existente (ou crie uma em "Gerenciar estantes").</small>
             </div>
           </div>
           <p class="mensagem-formulario" id="mensagem-cadastro" role="status" aria-live="polite"></p>
           <div class="barra-acoes">
             <button type="button" class="botao botao--secundario" data-acao="voltar-cadastro">Voltar</button>
+            <button type="button" class="botao botao--secundario" data-acao="gerenciar-estantes">Criar / Remover Estante</button>
             <button type="submit" class="botao botao--destaque">Salvar cadastro</button>
           </div>
         </form>
@@ -718,6 +728,54 @@
         </div>
         <div class="barra-acoes">
           <button type="button" class="botao botao--secundario" data-acao="voltar-avancadas">Voltar às ações avançadas</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ GERENCIAR ESTANTES (CRIAR / LISTAR / REMOVER) ============ -->
+    <section class="tela" id="tela-estantes" aria-labelledby="titulo-gerenciar-estantes" hidden>
+      <div class="cartao cartao--catalogo">
+        <header class="titulo">
+          <h1 id="titulo-gerenciar-estantes" tabindex="-1">Gerenciar Estantes</h1>
+        </header>
+
+        <form id="form-criar-estante" class="formulario-consulta">
+          <div class="campo">
+            <label for="estante-dominio1">Tema / Domínio Lado 1:</label>
+            <input id="estante-dominio1" name="dominio_lado_1" type="text" maxlength="100" placeholder="Ex.: Ficção Científica" required>
+          </div>
+          <div class="campo">
+            <label for="estante-dominio2">Tema / Domínio Lado 2:</label>
+            <input id="estante-dominio2" name="dominio_lado_2" type="text" maxlength="100" placeholder="Ex.: Romance Clássico" required>
+          </div>
+          <div class="campo">
+            <label for="estante-capacidade">Capacidade de livros:</label>
+            <input id="estante-capacidade" name="numero_de_livros" type="number" min="1" max="999999" value="100" required>
+          </div>
+          <button type="submit" class="botao botao--destaque" id="botao-criar-estante">+ Criar Nova Estante</button>
+        </form>
+
+        <p class="resumo-consulta" id="resumo-gerenciar-estantes" role="status" aria-live="polite">
+          ⚠️ Atenção: Ao excluir uma estante, TODOS os livros guardados nela também serão apagados automaticamente (ON DELETE CASCADE).
+        </p>
+
+        <div class="corpo corpo--catalogo">
+          <div class="painel painel--rolavel painel--catalogo">
+            <div class="catalogo-scroll" id="lista-gerenciar-estantes" aria-live="polite">
+              <div class="estado-vazio">
+                <svg class="icone estado-vazio__icone" aria-hidden="true"><use href="#i-banco"/></svg>
+                <h2>Carregando estantes...</h2>
+              </div>
+            </div>
+          </div>
+          <div class="slider" id="slider-gerenciar-estantes" aria-hidden="true">
+            <div class="slider__trilho"><div class="slider__alca"></div></div>
+          </div>
+        </div>
+
+        <div class="barra-acoes">
+          <button type="button" class="botao botao--secundario" data-acao="voltar-crud">Voltar ao menu</button>
+          <button type="button" class="botao botao--destaque" data-acao="cadastrar-livro">Ir para Cadastrar Livro</button>
         </div>
       </div>
     </section>
