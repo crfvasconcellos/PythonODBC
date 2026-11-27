@@ -1,10 +1,10 @@
 """
-Ponto de entrada único — Sistema da Biblioteca.
+Ponto de Entrada do Sistema da Biblioteca.
 
-Uso:
-    python app.py              -> Menu interativo no terminal (organizado pelas 5 seções)
-    python app.py --web        -> Interface Web + API HTTP nativa em http://127.0.0.1:8000
-    python app.py --web 8080   -> Interface Web em porta personalizada
+Como rodar:
+    python app.py              -> Abre o menu interativo no terminal (5 seções)
+    python app.py --web        -> Abre o servidor Web + API em http://127.0.0.1:8000
+    python app.py --web 8080   -> Abre o servidor Web em outra porta
 """
 import json
 import os
@@ -17,28 +17,39 @@ from urllib.parse import parse_qs, unquote, urlparse
 import pyodbc
 import biblioteca as bib
 
-PASTA_WEB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Interface-biblioteca")
-PREFIXO = "/api"
+# Pasta onde ficam os arquivos HTML, CSS e JS da interface visual
+PASTA_INTERFACE_WEB = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "Interface-biblioteca"
+)
 
 
 # ==============================================================================
-# 1. MENU INTERATIVO NO TERMINAL (Avaliação Oral)
+# PARTE 1: MENU INTERATIVO NO TERMINAL
 # ==============================================================================
 
-def _mostrar(registros, titulo):
+def mostrar_tabela(registros, titulo):
+    """Imprime uma lista de dicionários em formato de tabela simples no terminal."""
     print(f"\n=== {titulo} ===")
     if not registros:
         print("Nenhum registro retornado.")
         return
+
     colunas = list(registros[0].keys())
     print(" | ".join(colunas))
     print("-" * 75)
-    for row in registros:
-        print(" | ".join("NULL" if row.get(c) is None else str(row.get(c)) for c in colunas))
+
+    for linha in registros:
+        valores = []
+        for col in colunas:
+            valor = linha.get(col)
+            valores.append("NULL" if valor is None else str(valor))
+        print(" | ".join(valores))
+
     print(f"({len(registros)} registro(s))")
 
 
-def _menu_secao_1():
+def menu_secao_1():
+    """Seção 1: Operações básicas de CRUD (Criar, Ler, Atualizar, Excluir) e testes DDL."""
     while True:
         print("\n--- [Seção 1] CRUD Básico e Integridade (Cap. 1 a 4) ---")
         print("1. Listar livros (SELECT)")
@@ -47,43 +58,54 @@ def _menu_secao_1():
         print("4. Excluir livro (DELETE + Trigger Auditoria)")
         print("5. Validar todas as restrições DDL (PK, FK, CASCADE, SET NULL/DEFAULT, UNIQUE, CHECK, ALTER)")
         print("0. Voltar")
-        op = input("Opção: ").strip()
+
+        opcao = input("Opção: ").strip()
         try:
-            if op == "0":
+            if opcao == "0":
                 break
-            elif op == "1":
-                _mostrar(bib.listar_livros(), "Livros Cadastrados")
-            elif op == "2":
+            elif opcao == "1":
+                livros = bib.listar_livros()
+                mostrar_tabela(livros, "Livros Cadastrados")
+            elif opcao == "2":
                 nome = input("Título: ").strip()
                 autor = input("Autor: ").strip()
                 genero = input("Gênero: ").strip() or "Geral"
-                ex = int(input("Exemplares: ").strip() or "1")
-                est = int(input("ID Estante: ").strip() or "1")
-                pat = input("Código Patrimônio (opcional, UNIQUE): ").strip() or None
-                bib.cadastrar_livro(nome, autor, genero, ex, True, est, pat)
+                exemplares = int(input("Exemplares: ").strip() or "1")
+                id_estante = int(input("ID Estante: ").strip() or "1")
+                patrimonio = input("Código Patrimônio (opcional, UNIQUE): ").strip() or None
+
+                bib.cadastrar_livro(nome, autor, genero, exemplares, True, id_estante, patrimonio)
                 print("Livro cadastrado com sucesso!")
-            elif op == "3":
-                id_l = int(input("ID do livro: ").strip())
+            elif opcao == "3":
+                id_livro = int(input("ID do livro: ").strip())
                 nome = input("Novo título: ").strip()
                 autor = input("Novo autor: ").strip()
                 genero = input("Novo gênero: ").strip()
-                ex = int(input("Novos exemplares: ").strip())
-                ok = bib.atualizar_livro(id_l, nome, autor, genero, ex, True)
-                print("Atualizado!" if ok else "Livro não encontrado.")
-            elif op == "4":
-                id_l = int(input("ID do livro para excluir: ").strip())
-                ok = bib.excluir_livro(id_l)
-                print("Excluído!" if ok else "Livro não encontrado.")
-            elif op == "5":
+                exemplares = int(input("Novos exemplares: ").strip())
+
+                atualizou = bib.atualizar_livro(id_livro, nome, autor, genero, exemplares, True)
+                if atualizou:
+                    print("Atualizado!")
+                else:
+                    print("Livro não encontrado.")
+            elif opcao == "4":
+                id_livro = int(input("ID do livro para excluir: ").strip())
+                excluiu = bib.excluir_livro(id_livro)
+                if excluiu:
+                    print("Excluído!")
+                else:
+                    print("Livro não encontrado.")
+            elif opcao == "5":
                 for item in bib.testar_parte1_completa():
                     print(f"[{item['status']}] {item['item']} -> {item['detalhes']}")
             else:
                 print("Opção inválida! Tente novamente.")
-        except (ValueError, pyodbc.Error) as e:
-            print(f"[ERRO] {e}")
+        except (ValueError, pyodbc.Error) as erro:
+            print(f"[ERRO] {erro}")
 
 
-def _menu_secao_2():
+def menu_secao_2():
+    """Seção 2: Consultas de Álgebra Relacional, filtros LIKE, BETWEEN e valores NULL."""
     while True:
         print("\n--- [Seção 2] Álgebra Relacional e Buscas (Cap. 2 e 3) ---")
         print("1. Projeção DISTINCT vs ALL e Atributo Calculado")
@@ -95,48 +117,54 @@ def _menu_secao_2():
         print("7. Valores Nulos (IS NULL / IS NOT NULL) e ORDER BY NULLS FIRST/LAST")
         print("8. Executar bateria completa da Parte 2 (todos os 8 itens)")
         print("0. Voltar")
-        op = input("Opção: ").strip()
+
+        opcao = input("Opção: ").strip()
         try:
-            if op == "0":
+            if opcao == "0":
                 break
-            elif op == "1":
-                r = bib.projecao_distinct_all_e_calculo()
-                _mostrar(r["distinct"], "DISTINCT status_conservacao")
-                _mostrar(r["calculados"], "Projeção com Atributo Calculado")
-            elif op == "2":
-                r = bib.selecao_predicados_compostos_e_tupla()
-                _mostrar(r["predicados_compostos"], "Seleção com Predicados Compostos")
-                _mostrar(r["comparacao_tupla"], "Predicado com Tupla")
-            elif op == "3":
-                r = bib.produto_cartesiano_e_juncao_teta()
-                print(f"\nProduto Cartesiano: {r['qtd_livros']} x {r['qtd_espacos']} = {r['total_cartesiano']} linhas")
-                _mostrar(r["juncao_teta"], "Junção Teta (WHERE l.id_categoria = c.id_categoria)")
-            elif op == "4":
-                gen = input("Gênero (ex: Romance Clássico): ").strip() or "Romance Clássico"
-                _mostrar(bib.auto_juncao_livros_mesmo_autor_genero(gen), f"SELF JOIN ({gen})")
-            elif op == "5":
-                r = bib.buscar_strings_like_coringa_posicao()
-                _mostrar(r["like_percent"], "LIKE com % + UPPER/LOWER/||")
-                _mostrar(r["like_underline"], "LIKE com _ (PAT-____)")
-            elif op == "6":
-                mi = int(input("Mínimo: ").strip() or "10")
-                ma = int(input("Máximo: ").strip() or "20")
-                negar = input("Usar NOT BETWEEN? (s/N): ").strip().lower() == "s"
-                _mostrar(bib.buscar_livros_por_faixa_exemplares(mi, ma, negar), f"Faixa {mi}..{ma}")
-            elif op == "7":
-                r = bib.consultar_nulos_e_nao_nulos()
-                _mostrar(r["com_nulo"], "IS NULL (sem patrimônio)")
-                _mostrar(bib.ordenar_livros_multiatributo_nulos(True), "ORDER BY ... NULLS FIRST")
-            elif op == "8":
+            elif opcao == "1":
+                resultado = bib.projecao_distinct_all_e_calculo()
+                mostrar_tabela(resultado["distinct"], "DISTINCT status_conservacao")
+                mostrar_tabela(resultado["calculados"], "Projeção com Atributo Calculado")
+            elif opcao == "2":
+                resultado = bib.selecao_predicados_compostos_e_tupla()
+                mostrar_tabela(resultado["predicados_compostos"], "Seleção com Predicados Compostos")
+                mostrar_tabela(resultado["comparacao_tupla"], "Predicado com Tupla")
+            elif opcao == "3":
+                resultado = bib.produto_cartesiano_e_juncao_teta()
+                print(
+                    f"\nProduto Cartesiano: {resultado['qtd_livros']} x "
+                    f"{resultado['qtd_espacos']} = {resultado['total_cartesiano']} linhas"
+                )
+                mostrar_tabela(resultado["juncao_teta"], "Junção Teta (WHERE l.id_categoria = c.id_categoria)")
+            elif opcao == "4":
+                genero = input("Gênero (ex: Romance Clássico): ").strip() or "Romance Clássico"
+                mostrar_tabela(bib.auto_juncao_livros_mesmo_autor_genero(genero), f"SELF JOIN ({genero})")
+            elif opcao == "5":
+                resultado = bib.buscar_strings_like_coringa_posicao()
+                mostrar_tabela(resultado["like_percent"], "LIKE com % + UPPER/LOWER/||")
+                mostrar_tabela(resultado["like_underline"], "LIKE com _ (PAT-____)")
+            elif opcao == "6":
+                minimo = int(input("Mínimo: ").strip() or "10")
+                maximo = int(input("Máximo: ").strip() or "20")
+                usar_not = input("Usar NOT BETWEEN? (s/N): ").strip().lower() == "s"
+                livros = bib.buscar_livros_por_faixa_exemplares(minimo, maximo, usar_not)
+                mostrar_tabela(livros, f"Faixa {minimo}..{maximo}")
+            elif opcao == "7":
+                resultado = bib.consultar_nulos_e_nao_nulos()
+                mostrar_tabela(resultado["com_nulo"], "IS NULL (sem patrimônio)")
+                mostrar_tabela(bib.ordenar_livros_multiatributo_nulos(True), "ORDER BY ... NULLS FIRST")
+            elif opcao == "8":
                 for item in bib.testar_parte2_completa():
                     print(f"[{item['status']}] {item['item']} -> {item['detalhes']}")
             else:
                 print("Opção inválida! Tente novamente.")
-        except (ValueError, pyodbc.Error) as e:
-            print(f"[ERRO] {e}")
+        except (ValueError, pyodbc.Error) as erro:
+            print(f"[ERRO] {erro}")
 
 
-def _menu_secao_3():
+def menu_secao_3():
+    """Seção 3: Subconsultas (IN, EXISTS, SOME, CTE) e Conjuntos (UNION, INTERSECT, EXCEPT)."""
     while True:
         print("\n--- [Seção 3] Subconsultas e Operações de Conjunto (Cap. 3) ---")
         print("1. Subconsulta Escalar (Livros acima da média)")
@@ -148,45 +176,47 @@ def _menu_secao_3():
         print("7. EXCEPT vs EXCEPT ALL (Subtração de categorias / estantes vazias)")
         print("8. Executar bateria completa da Parte 3 (Agregações + Conjuntos 6/6)")
         print("0. Voltar")
-        op = input("Opção: ").strip()
+
+        opcao = input("Opção: ").strip()
         try:
-            if op == "0":
+            if opcao == "0":
                 break
-            elif op == "1":
-                _mostrar(bib.livros_acima_da_media_escalar(), "Subconsulta Escalar")
-            elif op == "2":
+            elif opcao == "1":
+                mostrar_tabela(bib.livros_acima_da_media_escalar(), "Subconsulta Escalar")
+            elif opcao == "2":
                 tipo = input("Tipo de espaço (ex: Acervo Geral de Livros): ").strip() or "Acervo Geral de Livros"
-                negar = input("Usar NOT IN? (s/N): ").strip().lower() == "s"
-                _mostrar(bib.livros_por_tipo_espaco_in(tipo, negar), "Subconsulta IN/NOT IN")
-            elif op == "3":
-                negar = input("Usar NOT EXISTS? (s/N): ").strip().lower() == "s"
-                _mostrar(bib.espacos_com_estantes_exists(negar), "EXISTS / NOT EXISTS")
-            elif op == "4":
-                dom = input("Domínio das estantes (ex: Ficção Científica): ").strip() or "Ficção Científica"
-                gen = input("Gênero de comparação (ex: Romance Clássico): ").strip() or "Romance Clássico"
-                _mostrar(bib.analise_acervo_critico(dom, gen), "CTE + SOME")
-            elif op == "5":
-                r = bib.comparar_union_vs_union_all()
-                print(f"\nUNION: {len(r['union'])} | UNION ALL: {len(r['union_all'])}")
-                _mostrar(r["union"], "UNION Temas")
-            elif op == "6":
-                r = bib.comparar_intersect_vs_intersect_all()
-                print(f"\nINTERSECT: {len(r['intersect'])} | INTERSECT ALL: {len(r['intersect_all'])}")
-                _mostrar(r["intersect"], "INTERSECT Categorias")
-            elif op == "7":
-                r = bib.comparar_except_vs_except_all()
-                print(f"\nEXCEPT: {len(r['except'])} | EXCEPT ALL: {len(r['except_all'])}")
-                _mostrar(r["except"], "EXCEPT Categorias")
-            elif op == "8":
+                usar_not = input("Usar NOT IN? (s/N): ").strip().lower() == "s"
+                mostrar_tabela(bib.livros_por_tipo_espaco_in(tipo, usar_not), "Subconsulta IN/NOT IN")
+            elif opcao == "3":
+                usar_not = input("Usar NOT EXISTS? (s/N): ").strip().lower() == "s"
+                mostrar_tabela(bib.espacos_com_estantes_exists(usar_not), "EXISTS / NOT EXISTS")
+            elif opcao == "4":
+                dominio = input("Domínio das estantes (ex: Ficção Científica): ").strip() or "Ficção Científica"
+                genero = input("Gênero de comparação (ex: Romance Clássico): ").strip() or "Romance Clássico"
+                mostrar_tabela(bib.analise_acervo_critico(dominio, genero), "CTE + SOME")
+            elif opcao == "5":
+                resultado = bib.comparar_union_vs_union_all()
+                print(f"\nUNION: {len(resultado['union'])} | UNION ALL: {len(resultado['union_all'])}")
+                mostrar_tabela(resultado["union"], "UNION Temas")
+            elif opcao == "6":
+                resultado = bib.comparar_intersect_vs_intersect_all()
+                print(f"\nINTERSECT: {len(resultado['intersect'])} | INTERSECT ALL: {len(resultado['intersect_all'])}")
+                mostrar_tabela(resultado["intersect"], "INTERSECT Categorias")
+            elif opcao == "7":
+                resultado = bib.comparar_except_vs_except_all()
+                print(f"\nEXCEPT: {len(resultado['except'])} | EXCEPT ALL: {len(resultado['except_all'])}")
+                mostrar_tabela(resultado["except"], "EXCEPT Categorias")
+            elif opcao == "8":
                 for item in bib.testar_parte3_completa():
                     print(f"[{item['status']}] {item['item']} -> {item['detalhes']}")
             else:
                 print("Opção inválida! Tente novamente.")
-        except (ValueError, pyodbc.Error) as e:
-            print(f"[ERRO] {e}")
+        except (ValueError, pyodbc.Error) as erro:
+            print(f"[ERRO] {erro}")
 
 
-def _menu_secao_4():
+def menu_secao_4():
+    """Seção 4: Agregações (GROUP BY/HAVING), JOINs, Views, Functions, Procedures e Triggers."""
     while True:
         print("\n--- [Seção 4] Agregações, Junções, Visões e Banco (Cap. 3, 4 e 5) ---")
         print("1. GROUP BY + HAVING + COUNT/SUM/AVG/MIN/MAX (Estatísticas por gênero)")
@@ -199,48 +229,51 @@ def _menu_secao_4():
         print("8. Consulta Recursiva (WITH RECURSIVE pisos)")
         print("9. Executar bateria completa da Parte 4 (Subconsultas, CTEs e CASE 8/8)")
         print("0. Voltar")
-        op = input("Opção: ").strip()
+
+        opcao = input("Opção: ").strip()
         try:
-            if op == "0":
+            if opcao == "0":
                 break
-            elif op == "1":
+            elif opcao == "1":
                 media = float(input("Média mínima de exemplares: ").strip() or "1")
-                _mostrar(bib.relatorio_estatisticas_genero(media), "GROUP BY + HAVING")
-            elif op == "2":
-                cod = input("Tipo (natural | inner | left | right | full): ").strip().lower() or "full"
-                _mostrar(bib.executar_join(cod), f"JOIN: {cod.upper()}")
-            elif op == "3":
-                _mostrar(bib.consultar_visao_localizacao_completa(), "VIEW Localização Completa")
-            elif op == "4":
-                if input("Executar REFRESH antes? (S/n): ").strip().lower() != "n":
+                mostrar_tabela(bib.relatorio_estatisticas_genero(media), "GROUP BY + HAVING")
+            elif opcao == "2":
+                tipo_join = input("Tipo (natural | inner | left | right | full): ").strip().lower() or "full"
+                mostrar_tabela(bib.executar_join(tipo_join), f"JOIN: {tipo_join.upper()}")
+            elif opcao == "3":
+                mostrar_tabela(bib.consultar_visao_localizacao_completa(), "VIEW Localização Completa")
+            elif opcao == "4":
+                atualizar = input("Executar REFRESH antes? (S/n): ").strip().lower() != "n"
+                if atualizar:
                     bib.atualizar_visao_materializada()
                     print("REFRESH MATERIALIZED VIEW concluído!")
-                _mostrar(bib.consultar_visao_materializada(), "MATERIALIZED VIEW Ranking Autores")
-            elif op == "5":
+                mostrar_tabela(bib.consultar_visao_materializada(), "MATERIALIZED VIEW Ranking Autores")
+            elif opcao == "5":
                 autor = input("Autor: ").strip()
-                res = bib.consultar_total_por_autor(autor)
-                print(f"Total retornado pela FUNCTION: {res['total']}")
-                _mostrar(res["livros"], f"Livros de {autor}")
-            elif op == "6":
+                resultado = bib.consultar_total_por_autor(autor)
+                print(f"Total retornado pela FUNCTION: {resultado['total']}")
+                mostrar_tabela(resultado["livros"], f"Livros de {autor}")
+            elif opcao == "6":
                 nome = input("Título: ").strip()
                 autor = input("Autor: ").strip()
                 genero = input("Gênero: ").strip() or "Geral"
                 bib.cadastrar_livro_via_procedure(nome, autor, genero, 1, True, 1)
                 print("Cadastrado via PROCEDURE!")
-            elif op == "7":
-                _mostrar(bib.consultar_auditoria_trigger(), "Auditoria do Trigger AFTER DELETE")
-            elif op == "8":
-                _mostrar(bib.consulta_recursiva_pisos(), "WITH RECURSIVE Pisos")
-            elif op == "9":
+            elif opcao == "7":
+                mostrar_tabela(bib.consultar_auditoria_trigger(), "Auditoria do Trigger AFTER DELETE")
+            elif opcao == "8":
+                mostrar_tabela(bib.consulta_recursiva_pisos(), "WITH RECURSIVE Pisos")
+            elif opcao == "9":
                 for item in bib.testar_parte4_completa():
                     print(f"[{item['status']}] {item['item']} -> {item['detalhes']}")
             else:
                 print("Opção inválida! Tente novamente.")
-        except (ValueError, pyodbc.Error) as e:
-            print(f"[ERRO] {e}")
+        except (ValueError, pyodbc.Error) as erro:
+            print(f"[ERRO] {erro}")
 
 
-def _menu_secao_5():
+def menu_secao_5():
+    """Seção 5: Inspecionar metadados do banco via ODBC, índices e permissões (DCL)."""
     while True:
         print("\n--- [Seção 5] Junções, Visões, Índices, DCL e Metadados (Cap. 4 e 5) ---")
         print("1. Listar tabelas e views do schema (cursor.tables)")
@@ -250,32 +283,34 @@ def _menu_secao_5():
         print("5. Executar bateria completa da Parte 5 (JOINs, Views, Índices e DCL 7/7)")
         print("6. Executar bateria completa da Parte 6 (Functions, Procedures, Triggers, OLAP e ODBC 6/6)")
         print("0. Voltar")
-        op = input("Opção: ").strip()
+
+        opcao = input("Opção: ").strip()
         try:
-            if op == "0":
+            if opcao == "0":
                 break
-            elif op == "1":
-                _mostrar(bib.inspecionar_tabelas_schema(), "Metadados: Tabelas")
-            elif op == "2":
-                tab = input("Nome da tabela (ex: livros): ").strip() or "livros"
-                _mostrar(bib.inspecionar_colunas_tabela(tab), f"Metadados: Colunas de {tab}")
-            elif op == "3":
-                _mostrar(bib.inspecionar_indices_schema(), "Índices (pg_indexes)")
-            elif op == "4":
+            elif opcao == "1":
+                mostrar_tabela(bib.inspecionar_tabelas_schema(), "Metadados: Tabelas")
+            elif opcao == "2":
+                tabela = input("Nome da tabela (ex: livros): ").strip() or "livros"
+                mostrar_tabela(bib.inspecionar_colunas_tabela(tabela), f"Metadados: Colunas de {tabela}")
+            elif opcao == "3":
+                mostrar_tabela(bib.inspecionar_indices_schema(), "Índices (pg_indexes)")
+            elif opcao == "4":
                 print(bib.demonstrar_dcl_grant_revoke())
-            elif op == "5":
+            elif opcao == "5":
                 for item in bib.testar_parte5_completa():
                     print(f"[{item['status']}] {item['item']} -> {item['detalhes']}")
-            elif op == "6":
+            elif opcao == "6":
                 for item in bib.testar_parte6_completa():
                     print(f"[{item['status']}] {item['item']} -> {item['detalhes']}")
             else:
                 print("Opção inválida! Tente novamente.")
-        except pyodbc.Error as e:
-            print(f"[ERRO] {e}")
+        except pyodbc.Error as erro:
+            print(f"[ERRO] {erro}")
 
 
 def menu_console():
+    """Menu principal exibido no terminal quando rodamos `python app.py`."""
     while True:
         print("\n============================================================")
         print("   SISTEMA DA BIBLIOTECA — ESTRUTURA MÍNIMA ENXUTA")
@@ -286,18 +321,19 @@ def menu_console():
         print("4. Seção 4: Agregações, JOINs, Views e BD   [Cap. 3, 4 e 5]")
         print("5. Seção 5: Metadados via ODBC              [Cap. 5]")
         print("0. Sair")
-        op = input("\nEscolha uma seção: ").strip()
-        if op == "1":
-            _menu_secao_1()
-        elif op == "2":
-            _menu_secao_2()
-        elif op == "3":
-            _menu_secao_3()
-        elif op == "4":
-            _menu_secao_4()
-        elif op == "5":
-            _menu_secao_5()
-        elif op == "0":
+
+        opcao = input("\nEscolha uma seção: ").strip()
+        if opcao == "1":
+            menu_secao_1()
+        elif opcao == "2":
+            menu_secao_2()
+        elif opcao == "3":
+            menu_secao_3()
+        elif opcao == "4":
+            menu_secao_4()
+        elif opcao == "5":
+            menu_secao_5()
+        elif opcao == "0":
             print("Encerrado.")
             break
         else:
@@ -305,154 +341,259 @@ def menu_console():
 
 
 # ==============================================================================
-# 2. MODO WEB (--web): Servidor HTTP Nativo integrado a biblioteca.py
+# PARTE 2: SERVIDOR WEB E API PARA A INTERFACE DO NAVEGADOR (--web)
 # ==============================================================================
 
-def _para_json(v):
-    if isinstance(v, Decimal):
-        return float(v)
-    if isinstance(v, (date, datetime)):
-        return v.isoformat()
-    return str(v)
+def converter_para_json(valor):
+    """Converte tipos do banco (Decimal e Datas) para formatos que o JSON entende."""
+    if isinstance(valor, Decimal):
+        return float(valor)
+    if isinstance(valor, (date, datetime)):
+        return valor.isoformat()
+    return str(valor)
 
 
-def _bool(v):
-    return v if isinstance(v, bool) else str(v).strip().lower() in ("true", "1", "sim", "s")
+def converter_para_booleano(valor):
+    """Transforma textos como 'true', '1', 'sim' em True ou False."""
+    if isinstance(valor, bool):
+        return valor
+    return str(valor).strip().lower() in ("true", "1", "sim", "s")
 
 
-class _ServidorWeb(SimpleHTTPRequestHandler):
+class ServidorBiblioteca(SimpleHTTPRequestHandler):
+    """
+    Servidor HTTP simples do Python:
+    1) Entrega os arquivos da pasta 'Interface-biblioteca' (index.html, css, js).
+    2) Responde aos pedidos da interface que começam com '/api/...' chamando o biblioteca.py.
+    """
+
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, directory=PASTA_WEB, **kwargs)
+        # Configura o servidor para entregar os arquivos da pasta Interface-biblioteca
+        super().__init__(*args, directory=PASTA_INTERFACE_WEB, **kwargs)
 
-    def _json(self, status, dados):
-        corpo = json.dumps(dados, ensure_ascii=False, default=_para_json).encode("utf-8")
-        self.send_response(status)
+    def responder_json(self, codigo_http, dados):
+        """Envia uma resposta em formato JSON para o navegador."""
+        texto_json = json.dumps(dados, ensure_ascii=False, default=converter_para_json)
+        bytes_json = texto_json.encode("utf-8")
+
+        self.send_response(codigo_http)
         self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Content-Length", str(len(corpo)))
+        self.send_header("Content-Length", str(len(bytes_json)))
         self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
-        self.wfile.write(corpo)
+        self.wfile.write(bytes_json)
 
-    def _corpo(self):
-        tam = int(self.headers.get("Content-Length") or 0)
-        if tam == 0:
+    def ler_json_recebido(self):
+        """Lê os dados em JSON enviados pelo navegador (no cadastro ou atualização)."""
+        tamanho = int(self.headers.get("Content-Length") or 0)
+        if tamanho == 0:
             return {}
-        dados = json.loads(self.rfile.read(tam).decode("utf-8"))
+        texto = self.rfile.read(tamanho).decode("utf-8")
+        dados = json.loads(texto)
         if not isinstance(dados, dict):
-            raise ValueError("O corpo da requisição deve ser um objeto JSON.")
+            raise ValueError("Os dados enviados devem ser um objeto JSON.")
         return dados
 
-    def _validar_livro(self, c, exigir_estante=True):
-        nome = str(c.get("nome") or c.get("titulo") or "").strip()
-        autor = str(c.get("autor") or "").strip()
-        genero = str(c.get("genero") or "").strip()
+    def validar_dados_do_livro(self, dados, exigir_estante=True):
+        """Verifica se os campos do livro enviados pela tela estão preenchidos corretamente."""
+        nome = str(dados.get("nome") or dados.get("titulo") or "").strip()
+        autor = str(dados.get("autor") or "").strip()
+        genero = str(dados.get("genero") or "").strip()
+
         if not nome or not autor or not genero:
-            raise ValueError("Campos obrigatórios ausentes: nome, autor e genero devem ser preenchidos.")
+            raise ValueError("Preencha todos os campos obrigatórios: nome, autor e gênero.")
+
         try:
-            ex = int(c.get("numero_de_exemplares"))
+            exemplares = int(dados.get("numero_de_exemplares"))
         except (TypeError, ValueError):
-            raise ValueError("Campo 'numero_de_exemplares' deve ser um número inteiro válido.")
-        if ex < 0:
-            raise ValueError("Violação de CHECK: 'numero_de_exemplares' não pode ser negativo.")
-        est = None
+            raise ValueError("O número de exemplares deve ser um número inteiro válido.")
+
+        if exemplares < 0:
+            raise ValueError("Violação de CHECK: o número de exemplares não pode ser negativo.")
+
+        id_estante = None
         if exigir_estante:
             try:
-                est = int(c.get("id_estante"))
+                id_estante = int(dados.get("id_estante"))
             except (TypeError, ValueError):
-                raise ValueError("Campo 'id_estante' deve ser um número inteiro válido.")
-            if est < 1:
-                raise ValueError("Campo 'id_estante' deve ser maior que zero.")
-        pat = c.get("codigo_patrimonio")
-        pat = str(pat).strip() if pat is not None and str(pat).strip() else None
-        status = str(c.get("status_conservacao") or "Bom").strip()
-        return nome, autor, genero, ex, _bool(c.get("pode_ser_emprestado", True)), est, pat, status
+                raise ValueError("O ID da estante deve ser um número inteiro válido.")
+            if id_estante < 1:
+                raise ValueError("O ID da estante deve ser maior que zero.")
 
-    def _api(self, metodo):
-        url = urlparse(self.path)
-        p = [unquote(x) for x in url.path[len(PREFIXO):].split("/") if x]
-        q = lambda k: (parse_qs(url.query).get(k) or [""])[0].strip()
+        patrimonio = dados.get("codigo_patrimonio")
+        if patrimonio is not None and str(patrimonio).strip():
+            patrimonio = str(patrimonio).strip()
+        else:
+            patrimonio = None
+
+        status = str(dados.get("status_conservacao") or "Bom").strip()
+        emprestavel = converter_para_booleano(dados.get("pode_ser_emprestado", True))
+
+        return nome, autor, genero, exemplares, emprestavel, id_estante, patrimonio, status
+
+    def processar_rota_api(self, metodo_http):
+        """Recebe uma chamada em '/api/...', chama a função SQL do biblioteca.py e devolve JSON."""
+        url_separada = urlparse(self.path)
+        caminho = unquote(url_separada.path)
+        parametros_url = parse_qs(url_separada.query)
+
+        # Função auxiliar simples para pegar um parâmetro da URL (ex: ?busca=Dom)
+        def pegar_parametro(nome_parametro):
+            lista_valores = parametros_url.get(nome_parametro)
+            if lista_valores:
+                return lista_valores[0].strip()
+            return ""
+
         try:
-            if metodo == "GET":
-                if p == ["status"]:
-                    return self._json(200, {"api": "ok", "banco": "ok"})
-                if p == ["livros"]:
-                    return self._json(200, bib.listar_livros(q("busca") or None))
-                if p == ["livros", "por-autor"]:
-                    return self._json(200, bib.consultar_total_por_autor(q("autor")))
-                if p == ["livros", "por-faixa"]:
-                    return self._json(200, {"registros": bib.buscar_livros_por_faixa_exemplares(int(q("minimo")), int(q("maximo")))})
-                if len(p) == 3 and p[:2] == ["consultas", "joins"]:
-                    return self._json(200, {"registros": bib.executar_join(p[2])})
-                if p == ["relatorios", "estatisticas-por-genero"]:
-                    return self._json(200, {"registros": bib.relatorio_estatisticas_genero(float(q("media_minima")))})
-                if p == ["relatorios", "autores-multigenero"]:
-                    return self._json(200, {"registros": bib.relatorio_autores_multigenero(q("genero1"), q("genero2"))})
-                if p == ["catalogo", "busca"]:
-                    return self._json(200, {"registros": bib.buscar_catalogo_palavra_chave(q("termo"))})
-                if p == ["auditoria", "estantes-vazias"]:
-                    return self._json(200, {"registros": bib.auditoria_estantes_vazias()})
-                if p == ["analises", "acervo-critico"]:
-                    return self._json(200, {"registros": bib.analise_acervo_critico(q("genero_alvo"), q("genero_comparacao"))})
-                if p == ["autores", "unicos"]:
-                    return self._json(200, {"registros": bib.listar_autores_unicos()})
-            elif metodo == "POST":
-                c = self._corpo()
-                if p == ["livros"]:
-                    nome, autor, genero, ex, emp, est, pat, status = self._validar_livro(c, True)
-                    id_novo = bib.cadastrar_livro(nome, autor, genero, ex, emp, est, pat, status)
-                    return self._json(201, {"mensagem": "Livro cadastrado.", "id_livro": id_novo})
-                if p == ["livros", "procedure"]:
-                    nome, autor, genero, ex, emp, est, _, _ = self._validar_livro(c, True)
-                    bib.cadastrar_livro_via_procedure(nome, autor, genero, ex, emp, est)
-                    return self._json(201, {"mensagem": "Livro cadastrado via PROCEDURE."})
-            elif metodo == "PUT" and len(p) == 2 and p[0] == "livros":
-                c = self._corpo()
-                nome, autor, genero, ex, emp, _, _, _ = self._validar_livro(c, False)
-                if not bib.atualizar_livro(int(p[1]), nome, autor, genero, ex, emp):
-                    return self._json(404, {"erro": "Livro não encontrado."})
-                return self._json(200, {"mensagem": "Livro atualizado."})
-            elif metodo == "DELETE" and len(p) == 2 and p[0] == "livros":
-                if not bib.excluir_livro(int(p[1])):
-                    return self._json(404, {"erro": "Livro não encontrado."})
-                return self._json(200, {"mensagem": "Livro excluído."})
-            elif metodo == "DELETE" and len(p) == 2 and p[0] == "editoras":
-                if not bib.excluir_editora(int(p[1])):
-                    return self._json(404, {"erro": "Editora não encontrada."})
-                return self._json(200, {"mensagem": "Editora excluída."})
-            self._json(404, {"erro": "Rota não encontrada."})
-        except (ValueError, KeyError, TypeError) as e:
-            self._json(400, {"erro": str(e)})
-        except pyodbc.IntegrityError as e:
-            texto = str(e).lower()
-            if "23505" in texto or "unicidade" in texto or "unique" in texto:
-                msg = "Violação de unicidade (UNIQUE): o código/valor informado já está em uso."
-            elif "23503" in texto or "chave estrangeira" in texto or "foreign key" in texto:
-                msg = "Violação de integridade referencial (FK / RESTRICT): registro protegido ou pai inexistente."
-            elif "23514" in texto or "checagem" in texto or "check" in texto:
-                msg = "Violação de regra de domínio (CHECK): valor fora dos permitidos."
-            elif "23502" in texto or "not-null" in texto or "não-nulo" in texto:
-                msg = "Campo obrigatório (NOT NULL) não informado."
-            else:
-                msg = "Violação de integridade no banco de dados."
-            self._json(409, {"erro": msg})
-        except pyodbc.Error as e:
-            self._json(503, {"erro": "Erro ao acessar o banco de dados.", "detalhe": str(e)})
+            # ------------------------------------------------------------------
+            # ROTAS GET (Consultas e Listagens)
+            # ------------------------------------------------------------------
+            if metodo_http == "GET":
+                if caminho == "/api/status":
+                    return self.responder_json(200, {"api": "ok", "banco": "ok"})
 
-    def _eh_api(self):
-        c = urlparse(self.path).path
-        return c == PREFIXO or c.startswith(PREFIXO + "/")
+                if caminho == "/api/livros":
+                    termo_busca = pegar_parametro("busca") or None
+                    return self.responder_json(200, bib.listar_livros(termo_busca))
+
+                if caminho == "/api/livros/por-autor":
+                    autor = pegar_parametro("autor")
+                    return self.responder_json(200, bib.consultar_total_por_autor(autor))
+
+                if caminho == "/api/livros/por-faixa":
+                    minimo = int(pegar_parametro("minimo"))
+                    maximo = int(pegar_parametro("maximo"))
+                    livros = bib.buscar_livros_por_faixa_exemplares(minimo, maximo)
+                    return self.responder_json(200, {"registros": livros})
+
+                if caminho.startswith("/api/consultas/joins/"):
+                    tipo_join = caminho.replace("/api/consultas/joins/", "").strip("/")
+                    return self.responder_json(200, {"registros": bib.executar_join(tipo_join)})
+
+                if caminho == "/api/relatorios/estatisticas-por-genero":
+                    media_minima = float(pegar_parametro("media_minima"))
+                    relatorio = bib.relatorio_estatisticas_genero(media_minima)
+                    return self.responder_json(200, {"registros": relatorio})
+
+                if caminho == "/api/relatorios/autores-multigenero":
+                    genero1 = pegar_parametro("genero1")
+                    genero2 = pegar_parametro("genero2")
+                    autores = bib.relatorio_autores_multigenero(genero1, genero2)
+                    return self.responder_json(200, {"registros": autores})
+
+                if caminho == "/api/catalogo/busca":
+                    termo = pegar_parametro("termo")
+                    resultado = bib.buscar_catalogo_palavra_chave(termo)
+                    return self.responder_json(200, {"registros": resultado})
+
+                if caminho == "/api/auditoria/estantes-vazias":
+                    return self.responder_json(200, {"registros": bib.auditoria_estantes_vazias()})
+
+                if caminho == "/api/analises/acervo-critico":
+                    genero_alvo = pegar_parametro("genero_alvo")
+                    genero_comp = pegar_parametro("genero_comparacao")
+                    resultado = bib.analise_acervo_critico(genero_alvo, genero_comp)
+                    return self.responder_json(200, {"registros": resultado})
+
+                if caminho == "/api/autores/unicos":
+                    return self.responder_json(200, {"registros": bib.listar_autores_unicos()})
+
+            # ------------------------------------------------------------------
+            # ROTAS POST (Cadastro de Livros)
+            # ------------------------------------------------------------------
+            elif metodo_http == "POST":
+                dados = self.ler_json_recebido()
+
+                if caminho == "/api/livros":
+                    nome, autor, genero, ex, emp, est, pat, status = self.validar_dados_do_livro(dados, True)
+                    id_novo = bib.cadastrar_livro(nome, autor, genero, ex, emp, est, pat, status)
+                    return self.responder_json(201, {"mensagem": "Livro cadastrado.", "id_livro": id_novo})
+
+                if caminho == "/api/livros/procedure":
+                    nome, autor, genero, ex, emp, est, _, _ = self.validar_dados_do_livro(dados, True)
+                    bib.cadastrar_livro_via_procedure(nome, autor, genero, ex, emp, est)
+                    return self.responder_json(201, {"mensagem": "Livro cadastrado via PROCEDURE."})
+
+            # ------------------------------------------------------------------
+            # ROTAS PUT (Atualização de Livro existente)
+            # ------------------------------------------------------------------
+            elif metodo_http == "PUT" and caminho.startswith("/api/livros/"):
+                id_livro = int(caminho.replace("/api/livros/", "").strip("/"))
+                dados = self.ler_json_recebido()
+                nome, autor, genero, ex, emp, _, _, _ = self.validar_dados_do_livro(dados, False)
+
+                if not bib.atualizar_livro(id_livro, nome, autor, genero, ex, emp):
+                    return self.responder_json(404, {"erro": "Livro não encontrado."})
+                return self.responder_json(200, {"mensagem": "Livro atualizado."})
+
+            # ------------------------------------------------------------------
+            # ROTAS DELETE (Exclusão de Livro ou Editora)
+            # ------------------------------------------------------------------
+            elif metodo_http == "DELETE" and caminho.startswith("/api/livros/"):
+                id_livro = int(caminho.replace("/api/livros/", "").strip("/"))
+                if not bib.excluir_livro(id_livro):
+                    return self.responder_json(404, {"erro": "Livro não encontrado."})
+                return self.responder_json(200, {"mensagem": "Livro excluído."})
+
+            elif metodo_http == "DELETE" and caminho.startswith("/api/editoras/"):
+                id_editora = int(caminho.replace("/api/editoras/", "").strip("/"))
+                if not bib.excluir_editora(id_editora):
+                    return self.responder_json(404, {"erro": "Editora não encontrada."})
+                return self.responder_json(200, {"mensagem": "Editora excluída."})
+
+            # Se nenhuma rota acima combinou, devolve erro 404 (Não encontrado)
+            self.responder_json(404, {"erro": "Rota não encontrada."})
+
+        except (ValueError, KeyError, TypeError) as erro_validacao:
+            self.responder_json(400, {"erro": str(erro_validacao)})
+
+        except pyodbc.IntegrityError as erro_integridade:
+            # Traduz os códigos de erro do PostgreSQL para mensagens fáceis de entender
+            texto_erro = str(erro_integridade).lower()
+            if "23505" in texto_erro or "unicidade" in texto_erro or "unique" in texto_erro:
+                mensagem = "Violação de unicidade (UNIQUE): o código/valor informado já está em uso."
+            elif "23503" in texto_erro or "chave estrangeira" in texto_erro or "foreign key" in texto_erro:
+                mensagem = "Violação de integridade referencial (FK / RESTRICT): registro protegido ou pai inexistente."
+            elif "23514" in texto_erro or "checagem" in texto_erro or "check" in texto_erro:
+                mensagem = "Violação de regra de domínio (CHECK): valor fora dos permitidos."
+            elif "23502" in texto_erro or "not-null" in texto_erro or "não-nulo" in texto_erro:
+                mensagem = "Campo obrigatório (NOT NULL) não informado."
+            else:
+                mensagem = "Violação de integridade no banco de dados."
+            self.responder_json(409, {"erro": mensagem})
+
+        except pyodbc.Error as erro_banco:
+            self.responder_json(503, {"erro": "Erro ao acessar o banco de dados.", "detalhe": str(erro_banco)})
+
+    def eh_rota_da_api(self):
+        """Verifica se o endereço pedido pelo navegador começa com '/api'."""
+        caminho = urlparse(self.path).path
+        return caminho == "/api" or caminho.startswith("/api/")
 
     def do_GET(self):
-        self._api("GET") if self._eh_api() else super().do_GET()
+        # Se for '/api/...', busca no banco de dados. Senão, entrega os arquivos HTML/CSS/JS.
+        if self.eh_rota_da_api():
+            self.processar_rota_api("GET")
+        else:
+            super().do_GET()
 
     def do_POST(self):
-        self._api("POST") if self._eh_api() else self._json(404, {"erro": "Não encontrado."})
+        if self.eh_rota_da_api():
+            self.processar_rota_api("POST")
+        else:
+            self.responder_json(404, {"erro": "Não encontrado."})
 
     def do_PUT(self):
-        self._api("PUT") if self._eh_api() else self._json(404, {"erro": "Não encontrado."})
+        if self.eh_rota_da_api():
+            self.processar_rota_api("PUT")
+        else:
+            self.responder_json(404, {"erro": "Não encontrado."})
 
     def do_DELETE(self):
-        self._api("DELETE") if self._eh_api() else self._json(404, {"erro": "Não encontrado."})
+        if self.eh_rota_da_api():
+            self.processar_rota_api("DELETE")
+        else:
+            self.responder_json(404, {"erro": "Não encontrado."})
 
     def do_OPTIONS(self):
         self.send_response(204)
@@ -462,19 +603,23 @@ class _ServidorWeb(SimpleHTTPRequestHandler):
         self.end_headers()
 
 
-def iniciar_web(porta=8000):
-    srv = ThreadingHTTPServer(("127.0.0.1", porta), _ServidorWeb)
-    print(f"Biblioteca rodando em http://127.0.0.1:{porta}  (API em {PREFIXO})")
-    print("Ctrl+C para encerrar.")
+def iniciar_servidor_web(porta=8000):
+    """Liga o servidor HTTP local na porta 8000."""
+    servidor = ThreadingHTTPServer(("127.0.0.1", porta), ServidorBiblioteca)
+    print(f"Biblioteca rodando em http://127.0.0.1:{porta}  (API em /api)")
+    print("Pressione Ctrl+C para encerrar.")
     try:
-        srv.serve_forever()
+        servidor.serve_forever()
     except KeyboardInterrupt:
-        srv.server_close()
+        servidor.server_close()
 
 
 if __name__ == "__main__":
+    # Se o usuário digitou `python app.py --web`, inicia a Interface Web.
+    # Caso contrário (`python app.py`), inicia o Menu no Terminal.
     if "--web" in sys.argv:
-        args = [a for a in sys.argv[1:] if a != "--web"]
-        iniciar_web(int(args[0]) if args and args[0].isdigit() else 8000)
+        argumentos = [arg for arg in sys.argv[1:] if arg != "--web"]
+        porta_escolhida = int(argumentos[0]) if argumentos and argumentos[0].isdigit() else 8000
+        iniciar_servidor_web(porta_escolhida)
     else:
         menu_console()
