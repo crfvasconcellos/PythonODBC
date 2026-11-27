@@ -59,6 +59,49 @@ def listar_livros(busca: str | None = None) -> list[dict]:
         return _para_dicts(cursor)
 
 
+def _validar_capacidade_estante(
+    cursor,
+    id_estante: int,
+    novos_exemplares: int,
+    ignorar_id_livro: int | None = None,
+) -> None:
+    """
+    Verifica se a soma dos exemplares (numero_de_exemplares) na estante
+    não ultrapassa a capacidade máxima da estante (numero_de_livros).
+    """
+    cursor.execute(
+        "SELECT numero_de_livros FROM biblioteca.estantes WHERE id_estante = ?;",
+        (int(id_estante),),
+    )
+    row_est = cursor.fetchone()
+    if not row_est:
+        raise ValueError(f"A Estante #{id_estante} não existe no banco de dados.")
+
+    capacidade_maxima = int(row_est[0])
+
+    if ignorar_id_livro is not None:
+        cursor.execute(
+            "SELECT COALESCE(SUM(numero_de_exemplares), 0) FROM biblioteca.livros WHERE id_estante = ? AND id_livro <> ?;",
+            (int(id_estante), int(ignorar_id_livro)),
+        )
+    else:
+        cursor.execute(
+            "SELECT COALESCE(SUM(numero_de_exemplares), 0) FROM biblioteca.livros WHERE id_estante = ?;",
+            (int(id_estante),),
+        )
+
+    exemplares_ocupados = int(cursor.fetchone()[0])
+    vagas_restantes = max(0, capacidade_maxima - exemplares_ocupados)
+
+    if exemplares_ocupados + int(novos_exemplares) > capacidade_maxima:
+        raise ValueError(
+            f"Capacidade da Estante #{id_estante} excedida! "
+            f"A estante comporta no máximo {capacidade_maxima} exemplar(es), "
+            f"já possui {exemplares_ocupados} ocupado(s) ({vagas_restantes} vaga(s) livre(s)) "
+            f"e você tentou colocar {novos_exemplares} exemplar(es)."
+        )
+
+
 def cadastrar_livro(
     nome: str,
     autor: str,
@@ -82,6 +125,7 @@ def cadastrar_livro(
         RETURNING id_livro;
     """
     with transacao() as cursor:
+        _validar_capacidade_estante(cursor, int(id_estante), int(numero_de_exemplares))
         cursor.execute(
             sql,
             (
@@ -112,6 +156,17 @@ def atualizar_livro(
         WHERE id_livro = ?;
     """
     with transacao() as cursor:
+        cursor.execute("SELECT id_estante FROM biblioteca.livros WHERE id_livro = ?;", (int(id_livro),))
+        row_livro = cursor.fetchone()
+        if not row_livro:
+            return False
+        if row_livro[0] is not None:
+            _validar_capacidade_estante(
+                cursor,
+                int(row_livro[0]),
+                int(numero_de_exemplares),
+                ignorar_id_livro=int(id_livro),
+            )
         cursor.execute(
             sql,
             (nome, autor, genero, int(numero_de_exemplares), bool(pode_ser_emprestado), int(id_livro)),
@@ -208,9 +263,9 @@ def _garantir_infraestrutura_base_estantes(cursor) -> tuple[int, str]:
 
 def listar_estantes() -> list[dict]:
     """
-    [CONCEITO]: CRUD ESTANTES, SELECT, LEFT JOIN, COUNT, GROUP BY
+    [CONCEITO]: CRUD ESTANTES, SELECT, LEFT JOIN, COUNT, SUM, GROUP BY
     [CAPÍTULO]: Cap. 3 e Cap. 4
-    [DESCRIÇÃO]: Lista todas as estantes cadastradas com seus domínios e a quantidade de livros armazenados.
+    [DESCRIÇÃO]: Lista todas as estantes cadastradas com seus domínios, capacidade máxima, exemplares ocupados e vagas restantes.
     """
     sql = """
         SELECT e.id_estante,
@@ -219,7 +274,9 @@ def listar_estantes() -> list[dict]:
                e.numero_de_livros AS capacidade_livros,
                e.tipo,
                e.id_espaco,
-               COUNT(l.id_livro) AS qtd_livros_cadastrados
+               COUNT(l.id_livro) AS qtd_livros_cadastrados,
+               COALESCE(SUM(l.numero_de_exemplares), 0) AS exemplares_ocupados,
+               GREATEST(0, e.numero_de_livros - COALESCE(SUM(l.numero_de_exemplares), 0)) AS vagas_restantes
         FROM biblioteca.estantes e
         LEFT JOIN biblioteca.livros l ON l.id_estante = e.id_estante
         GROUP BY e.id_estante, e.dominio_lado_1, e.dominio_lado_2, e.numero_de_livros, e.tipo, e.id_espaco
@@ -1532,6 +1589,7 @@ def cadastrar_livro_via_procedure(
         );
     """
     with transacao() as cursor:
+        _validar_capacidade_estante(cursor, int(id_estante), int(numero_de_exemplares))
         cursor.execute(
             sql,
             (nome, autor, genero, int(numero_de_exemplares), bool(pode_ser_emprestado), int(id_estante)),

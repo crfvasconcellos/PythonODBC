@@ -446,7 +446,15 @@
       });
       if (!resposta.ok) {
         retirarPendencia(op.chave);
-        return { estado: 'erro', texto: textoDeErroHTTP(resposta, op.tipo === 'exclusao' ? 'excluir' : 'salvar') };
+        let msgServidor = '';
+        try {
+          const corpoErro = await resposta.json();
+          if (corpoErro && typeof corpoErro.erro === 'string') msgServidor = corpoErro.erro;
+        } catch (e) {}
+        return {
+          estado: 'erro',
+          texto: msgServidor || textoDeErroHTTP(resposta, op.tipo === 'exclusao' ? 'excluir' : 'salvar')
+        };
       }
       retirarPendencia(op.chave);
       return {
@@ -596,8 +604,10 @@
       for (const est of estantes) {
         const opt = document.createElement('option');
         opt.value = String(est.id_estante);
-        const qtd = Number(est.qtd_livros_cadastrados || 0);
-        opt.textContent = `Estante #${est.id_estante} — ${est.dominio_lado_1} / ${est.dominio_lado_2} (${qtd} livro(s))`;
+        const cap = Number(est.capacidade_livros ?? 100);
+        const ocup = Number(est.exemplares_ocupados ?? 0);
+        const vagas = Number(est.vagas_restantes ?? Math.max(0, cap - ocup));
+        opt.textContent = `Estante #${est.id_estante} — ${est.dominio_lado_1} / ${est.dominio_lado_2} (Ocupação: ${ocup}/${cap} exemplares — ${vagas} vaga(s) livre(s))`;
         selectEstante.appendChild(opt);
       }
       if (ajuda) {
@@ -1396,12 +1406,15 @@
         const ficha = document.createElement('article');
         ficha.className = 'ficha-livro';
         const qtdLivros = Number(est.qtd_livros_cadastrados || 0);
+        const cap = Number(est.capacidade_livros ?? 100);
+        const ocup = Number(est.exemplares_ocupados ?? 0);
+        const vagas = Number(est.vagas_restantes ?? Math.max(0, cap - ocup));
         ficha.innerHTML = `
           <dl>
             <div><dt>Domínio Lado 1:</dt><dd>${est.dominio_lado_1 || '—'}</dd></div>
             <div><dt>Domínio Lado 2:</dt><dd>${est.dominio_lado_2 || '—'}</dd></div>
-            <div><dt>Capacidade:</dt><dd>${est.capacidade_livros ?? 100} livros</dd></div>
-            <div><dt>Livros nesta estante:</dt><dd><strong>${qtdLivros} livro(s)</strong></dd></div>
+            <div><dt>Capacidade máxima:</dt><dd>${cap} exemplar(es)</dd></div>
+            <div><dt>Ocupação atual:</dt><dd><strong>${ocup} / ${cap} exemplar(es) (${vagas} vaga(s) livre(s)) — ${qtdLivros} título(s)</strong></dd></div>
           </dl>
           <div style="display:flex; flex-direction:column; align-items:flex-end; gap:0.5rem;">
             <span class="ficha-livro__id">Estante #${est.id_estante}</span>
