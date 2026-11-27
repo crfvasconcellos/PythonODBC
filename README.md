@@ -1,167 +1,133 @@
-# Documentação do Trabalho Prático Avaliativo Semestral: Visões, Visões Materializadas e CRUD em Python com ODBC
+# 📚 Sistema de Gestão de Biblioteca — Python + ODBC + PostgreSQL
+
+## 📖 Visão Geral do Projeto
+
+Este projeto é uma aplicação completa para gerenciamento e consulta do acervo de uma **Biblioteca**, desenvolvida em **Python puro** conectado diretamente ao **PostgreSQL** via driver **ODBC (`pyodbc`)**, sem o uso de ORMs (como Django ou SQLAlchemy) ou frameworks web externos.
+
+O sistema conta com duas formas de uso integradas:
+1. **Interface Web Visual (`Interface-biblioteca/`):** Front-end moderno em HTML, CSS e JavaScript puro que se comunica com o Python via API HTTP nativa.
+2. **Menu Interativo no Terminal (`app.py`):** Menu em modo texto dividido pelas 5 seções de conteúdo de Banco de Dados (CRUD, Álgebra Relacional, Subconsultas, Conjuntos, JOINs, Views, Procedures, Triggers e Metadados ODBC).
 
 ---
 
-## Visão Geral do Projeto
+## 🗂️ Estrutura Principal do Projeto
 
-Este projeto consiste na modelagem, consolidação e manipulação de um banco de dados relacional para um **Sistema de Gestão de Acervo, Vendas e Clientes de uma Livraria**, desenvolvido para o SGBD **PostgreSQL** com integração em **Python (pyodbc)**.
-
-O trabalho contempla:
-1. **Estrutura de Tabelas (Schema completo)** com chaves primárias, estrangeiras e restrições.
-2. **Carga Inicial de Dados de Teste** cobrindo múltiplos cenários reais.
-3. **10 Visões Tradicionais (`CREATE VIEW`)** construídas utilizando **Junções Internas (INNER JOIN)** e **Junções Externas (LEFT JOIN, RIGHT JOIN, FULL OUTER JOIN)**.
-4. **10 Visões Materializadas (`CREATE MATERIALIZED VIEW`)** utilizando métricas agregadas e junções avançadas.
-5. **Mecanismos de Atualização (`REFRESH MATERIALIZED VIEW`)** e instruções passo a passo para consolidação pelo docente.
-6. **Aplicação CRUD em Python** nativo via `pyodbc` para manipulação e consulta do acervo de livros.
-
----
-
-## Tecnologias Utilizadas
-
-- **SGBD**: PostgreSQL
-- **Linguagem**: Python 3
-- **Conectividade**: `pyodbc` (Driver ODBC do PostgreSQL)
-- **Configuração**: `python-dotenv` (Gerenciamento de variáveis de ambiente via `.env`)
-
----
-
-## Estrutura de Pastas e Arquivos
+Toda a aplicação funciona a partir dos arquivos Python da **pasta base (raiz)** e da pasta **`Interface-biblioteca/`**:
 
 ```text
-PythonDjangoODBC/
-├── .env                       # Configurações de conexão do banco de dados
-├── main.py                    # Script de CRUD interativo e consultas em Python via ODBC
-├── aplicar_scripts_docente.py  # Script de execução e verificação automatizada
-├── README.md                  # Documentação completa do projeto
+PythonODBC/
+├── .env                       # Credenciais de conexão com o PostgreSQL via ODBC
+├── requirements.txt           # Dependências do Python (pyodbc e python-dotenv)
+├── db.py                      # Camada de conexão ODBC e controle de transações (ACID)
+├── biblioteca.py              # Camada de dados: todas as consultas e comandos SQL puros
+├── app.py                     # Ponto de entrada: Menu no Terminal e Servidor Web/API HTTP
+├── testar_interfaces_e2e.py   # Script auxiliar de testes automatizados (opcional)
 │
-└── sql/                       # Todos os scripts SQL do projeto organizados em ordem
-    ├── 01_criacao_banco.sql   # Criação do esquema 'biblioteca'
-    ├── 02_criacao_tabelas.sql # Criação das tabelas com restrições e auditoria
-    ├── 03_insercoes.sql       # Povoamento e carga de dados de exemplo
-    ├── 04_views.sql           # 10 Visões Tradicionais + 10 Visões Materializadas
-    ├── 05_funcoes_cap5.sql    # Functions, Procedures e Triggers (Capítulo 5)
-    └── 06_consultas_cap3.sql  # DDL/DML Avançadas, CTEs, Subconsultas e Operadores (Capítulo 3)
+└── Interface-biblioteca/      # Front-end visual do sistema (HTML5, CSS3 e JS puro)
+    ├── index.html             # Página única (SPA) com todas as telas e formulários
+    ├── css/                   # Estilos visuais, animações e layout responsivo
+    ├── js/
+    │   └── app.js             # Lógica da interface, carrossel e chamadas fetch() para a API
+    └── imgs/                  # Imagens de fundo e recursos gráficos da interface
 ```
+
+*(Observação: a pasta `database/` contém apenas scripts SQL históricos salvos como referência do banco).*
 
 ---
 
-## Configuração do Ambiente e Conexão
+## 🔍 Detalhamento de Cada Arquivo
 
-1. Certifique-se de configurar o arquivo `.env` na raiz do projeto com as credenciais do seu banco de dados:
+### 1. `db.py` — Conexão ODBC e Transações ACID
+É o arquivo mais enxuto e fundamental da comunicação com o PostgreSQL.
+* **`conectar()`:** Lê as variáveis do arquivo `.env` (`DB_DRIVER`, `DB_SERVER`, `DB_PORT`, `DB_DATABASE`, `DB_USER`, `DB_PASSWORD`) e abre a conexão com o PostgreSQL através do `pyodbc.connect()` com `autocommit=False`.
+* **`transacao()`:** Um gerenciador de contexto (`with transacao() as cursor:`) que entrega um cursor pronto para executar comandos SQL.
+  * Se o comando terminar sem erros, ele executa `conn.commit()` automaticamente.
+  * Se ocorrer qualquer erro de banco ou validação, ele executa `conn.rollback()` automaticamente (garantindo a atomicidade ACID) e fecha o cursor e a conexão no bloco `finally`.
 
+---
+
+### 2. `biblioteca.py` — Centralizador de Operações SQL
+É o "coração" do sistema. Contém todas as funções Python que executam **SQL puro** no PostgreSQL utilizando `db.transacao()`, organizadas em **5 seções temáticas**:
+
+* **Seção 1 — CRUD Básico e Integridade (Cap. 1 a 4):**
+  * `listar_livros()`: Consulta `SELECT` ordenada, com suporte a filtro de busca via `ILIKE` e *Prepared Statement* (`?`).
+  * `cadastrar_livro()`: `INSERT ... RETURNING id_livro` parametrizado, respeitando regras `NOT NULL`, `UNIQUE`, `CHECK` e `FOREIGN KEY`.
+  * `atualizar_livro()`: `UPDATE` parametrizado pelo `id_livro`.
+  * `excluir_livro()` e `excluir_editora()`: `DELETE` parametrizado (acionando gatilho de auditoria na exclusão de livros e testando restrição `RESTRICT` em editoras).
+* **Seção 2 — Álgebra Relacional e Buscas (Cap. 2 e 3):**
+  * Projeções (`DISTINCT` vs `ALL`), atributos calculados, seleção com predicados compostos (`AND`, `OR`, `NOT`), produto cartesiano, junção teta, `SELF JOIN`, buscas com `LIKE` (`%` e `_`), concatenação (`||`), `UPPER`/`LOWER`, faixas com `BETWEEN` e tratamento de nulos (`IS NULL`, `NULLS FIRST/LAST`).
+* **Seção 3 — Subconsultas e Operações de Conjunto (Cap. 3):**
+  * Subconsultas escalares, `IN` / `NOT IN`, subconsultas correlacionadas com `EXISTS` / `NOT EXISTS`, quantificador `SOME` com `WITH` (CTE) e operações de conjunto (`UNION`, `INTERSECT`, `EXCEPT` e suas variações `ALL`).
+* **Seção 4 — Agregações, Junções, Visões e Programação no Banco (Cap. 3, 4 e 5):**
+  * Agrupamentos com `GROUP BY` e `HAVING` (`COUNT`, `SUM`, `AVG`, `MIN`, `MAX`), todos os tipos de junção (`NATURAL JOIN`, `INNER JOIN`, `LEFT JOIN`, `RIGHT JOIN`, `FULL OUTER JOIN`), leitura de `VIEW` e `MATERIALIZED VIEW` (com `REFRESH`), chamada de *Stored Function* (`SELECT fn_contar_livros_por_autor(?)`), *Stored Procedure* (`CALL sp_cadastrar_livro(...)`), consulta ao log do *Trigger* de auditoria e CTE recursiva (`WITH RECURSIVE`).
+* **Seção 5 — Metadados via ODBC e DCL (Cap. 4 e 5):**
+  * Inspeção do catálogo do banco usando métodos nativos do cursor ODBC (`cursor.tables()`, `cursor.columns()`), leitura de índices (`pg_indexes`) e demonstração de comandos DCL (`CREATE ROLE`, `GRANT`, `REVOKE`).
+
+---
+
+### 3. `app.py` — Ponto de Entrada (Terminal + Servidor Web/API)
+É o arquivo que você executa para rodar o programa. Ele une o `biblioteca.py` ao usuário final de duas maneiras simples:
+
+* **Parte 1 — Menu de Console (`menu_console()`):**
+  * Exibe um menu numérico no terminal dividido nas 5 seções do `biblioteca.py`, lê os dados digitados com `input()` e imprime os resultados formatados em tabela com `mostrar_tabela()`.
+* **Parte 2 — Servidor Web e API (`ServidorBiblioteca` e `iniciar_servidor_web()`):**
+  * Utiliza o módulo nativo `http.server` do Python (`ThreadingHTTPServer` e `SimpleHTTPRequestHandler`) para:
+    1. **Servir a Interface Visual:** Entrega automaticamente o arquivo `Interface-biblioteca/index.html`, além dos arquivos CSS, JS e imagens quando você acessa `http://127.0.0.1:8000`.
+    2. **Responder às Rotas da API (`/api/...`):** Recebe chamadas HTTP (`GET`, `POST`, `PUT`, `DELETE`) vindas do JavaScript da interface, chama as funções do `biblioteca.py` e devolve os dados do PostgreSQL convertidos para JSON.
+    3. **Tratar Erros do Banco:** Captura violações de integridade do PostgreSQL (`UNIQUE`, `FOREIGN KEY`, `CHECK`, `NOT NULL`) e devolve mensagens amigáveis para a interface exibir ao usuário.
+
+---
+
+### 4. `Interface-biblioteca/` — Interface Gráfica no Navegador
+Front-end construído sem dependências externas (HTML + CSS + JavaScript puro):
+* **`index.html`:** Estrutura todas as telas do sistema em uma única página (Tela Principal, Listagem do Catálogo, Cadastro de Livro, Atualização, Exclusão e Menu de Consultas Avançadas de Banco de Dados).
+* **`css/`:** Estilização moderna com efeito translúcido (*glassmorphism*), tipografia adaptada para leitura e transições suaves.
+* **`js/app.js`:**
+  * Controla o carrossel de imagens de fundo (`imgs/fundos/`).
+  * Faz a navegação entre as telas sem recarregar a página.
+  * Conecta todos os formulários e botões às rotas `/api/...` do `app.py` usando `fetch()` assíncrono (`async/await`), exibindo as tabelas e mensagens de retorno do PostgreSQL diretamente na tela.
+
+---
+
+## ⚙️ Configuração e Como Rodar o Programa
+
+### 1. Pré-requisitos
+* **Python 3.10+** instalado.
+* **PostgreSQL** rodando localmente (porta `5432`) com o banco `biblioteca` criado.
+* **Driver ODBC do PostgreSQL (`psqlODBC` 64-bits)** instalado no Windows.
+
+### 2. Instalar as Dependências do Python
+No terminal, dentro da pasta raiz do projeto, execute:
+```powershell
+pip install -r requirements.txt
+```
+
+### 3. Configurar o Arquivo `.env`
+Crie ou verifique o arquivo `.env` na raiz do projeto com os dados do seu PostgreSQL:
 ```env
-DB_DRIVER=PostgreSQL Unicode(x64)
+DB_DRIVER=PostgreSQL ODBC Driver(UNICODE)
 DB_SERVER=localhost
 DB_PORT=5432
 DB_DATABASE=biblioteca
 DB_USER=postgres
-DB_PASSWORD=sua_senha
+DB_PASSWORD=sua_senha_aqui
 ```
 
-2. Instale as dependências necessárias do Python:
+### 4. Executar o Sistema
 
-```bash
-pip install pyodbc python-dotenv
+#### 🌐 Modo 1: Abrir a Interface Web (Navegador)
+No terminal, execute:
+```powershell
+python app.py --web
 ```
+Depois, abra o navegador e acesse:
+👉 **`http://127.0.0.1:8000`**
 
----
+*(Se quiser usar outra porta, basta informá-la no comando, por exemplo: `python app.py --web 8080`). Para desligar o servidor, pressione `Ctrl + C` no terminal.*
 
-## Instruções de Execução
-
-### Opção 1: Execução Automatizada via Python (Docente / Acadêmico)
-
-Para consolidar o banco de dados, aplicar todos os scripts SQL sequenciais (`01` a `06`) e validar as visões automaticamente:
-
-```bash
-python aplicar_scripts_docente.py
+#### 💻 Modo 2: Abrir o Menu Interativo no Terminal
+Se preferir usar o sistema em modo texto direto no terminal, execute:
+```powershell
+python app.py
 ```
-
-Para interagir com o menu CRUD de livros e consultas no terminal:
-
-```bash
-python main.py
-```
-
-### Opção 2: Execução via Cliente SQL (psql, DBeaver, pgAdmin)
-
-Execute em ordem os scripts da pasta `sql/`:
-
-```bash
-psql -U postgres -d biblioteca -f sql/01_criacao_banco.sql
-psql -U postgres -d biblioteca -f sql/02_criacao_tabelas.sql
-psql -U postgres -d biblioteca -f sql/03_insercoes.sql
-psql -U postgres -d biblioteca -f sql/04_views.sql
-psql -U postgres -d biblioteca -f sql/05_funcoes_cap5.sql
-psql -U postgres -d biblioteca -f sql/06_consultas_cap3.sql
-```
-
----
-
-## Relação das 10 Visões (Views Tradicionais)
-
-| # | Nome da Visão | Tipo de Junção Utilizada | Descrição e Raciocínio de Negócio |
-|---|---|---|---|
-| 1 | `vw_livros_localizacao_completa` | `INNER JOIN` (Múltiplos) | Exibe a localização física exata do livro (estante, número do espaço, piso, endereço da edificação e diretoria). |
-| 2 | `vw_espacos_sem_estantes` | `LEFT JOIN` | Identifica salas ou espaços cadastrados que ainda **não possuem nenhuma estante física** alocada. |
-| 3 | `vw_livros_nao_emprestaveis` | `INNER JOIN` | Lista obras reservadas apenas para consulta local (`pode_ser_emprestado = FALSE`) com o tipo de espaço e se é privado. |
-| 4 | `vw_edificacoes_sem_livros` | `LEFT JOIN` (Múltiplo) | Mapeia endereços ou edifícios cadastrados no sistema que **não possuem nenhum livro** armazenado. |
-| 5 | `vw_resumo_estantes_dominio` | `INNER JOIN` | Resumo analítico de cada estante (domínios dos lados 1 e 2) com total de títulos e exemplares físicos. |
-| 6 | `vw_livros_em_espacos_privados` | `INNER JOIN` | Filtra livros armazenados em salas e laboratórios restritos (`eh_privado = TRUE`). |
-| 7 | `vw_capacidade_pisos_edificacoes` | `INNER JOIN` | Relatório estrutural de capacidade máxima de pessoas e espaços por piso e edificação. |
-| 8 | `vw_generos_livros_por_edificacao` | `INNER JOIN` (Múltiplos) | Quantidade de títulos e exemplares agrupados por gênero literário e por prédio. |
-| 9 | `vw_hierarquia_edificacoes_pisos` | `FULL OUTER JOIN` | Cruzamento completo entre o cadastro de edificações e pisos, exibindo locais com ou sem pisos alocados. |
-| 10 | `vw_autores_obras_cadastradas` | `INNER JOIN` | Agrupamento de autores com a contagem total de suas obras, número de exemplares e gêneros publicados. |
-
----
-
-## Relação das 10 Visões Materializadas (`MATERIALIZED VIEWS`)
-
-| # | Nome da Visão Materializada | Tipo de Junção Utilizada | Descrição e Raciocínio de Negócio |
-|---|---|---|---|
-| 1 | `mv_estatisticas_por_edificacao` | `INNER JOIN` (Múltiplos) | Total consolidado de pisos, espaços, estantes e exemplares de livros por prédio. |
-| 2 | `mv_total_livros_por_genero_e_piso` | `INNER JOIN` | Volume pré-calculado de acervo por gênero literário e por andar/piso. |
-| 3 | `mv_ocupacao_estantes_livros` | `LEFT JOIN` | Comparativo entre a capacidade informada da estante e a contagem real de exemplares armazenados. |
-| 4 | `mv_livros_emprestaveis_vs_restritos` | `INNER JOIN` | Totalização de acervo circulante (para empréstimo) versus acervo restrito agrupado por tipo de espaço. |
-| 5 | `mv_relatorio_acervo_espacos_privados` | `INNER JOIN` | Patrimônio total de livros armazenados em ambientes privados vs públicos. |
-| 6 | `mv_capacidade_pisos_vs_espacos` | `INNER JOIN` | Medição de ocupação física: capacidade máxima do piso versus espaços efetivamente cadastrados. |
-| 7 | `mv_ranking_autores_maior_acervo` | `INNER JOIN` | Ranking dos autores com maior número de exemplares físicos disponíveis nas bibliotecas. |
-| 8 | `mv_densidade_estantes_por_tipo_espaco` | `LEFT JOIN` | Medição de utilização dos tipos de espaço (estantes instaladas vs limite máximo permitido). |
-| 9 | `mv_mapeamento_acervo_biblioteca_diretoria` | `INNER JOIN` (Múltiplos) | Total de edificações e volume total de livros geridos por cada diretoria da biblioteca. |
-| 10 | `mv_relatorio_completo_hierarquia` | `FULL OUTER JOIN` (Múltiplo) | Visão analítica completa em árvore da hierarquia física (Diretoria → Edificação → Piso → Espaço → Estante → Livro). |
-
----
-
-## Atualização das Visões Materializadas (`REFRESH`)
-
-Para atualizar os dados pré-calculados nas visões materializadas, execute:
-
-```sql
-REFRESH MATERIALIZED VIEW mv_estatisticas_por_edificacao;
-REFRESH MATERIALIZED VIEW mv_total_livros_por_genero_e_piso;
-REFRESH MATERIALIZED VIEW mv_ocupacao_estantes_livros;
-REFRESH MATERIALIZED VIEW mv_livros_emprestaveis_vs_restritos;
-REFRESH MATERIALIZED VIEW mv_relatorio_acervo_espacos_privados;
-REFRESH MATERIALIZED VIEW mv_capacidade_pisos_vs_espacos;
-REFRESH MATERIALIZED VIEW mv_ranking_autores_maior_acervo;
-REFRESH MATERIALIZED VIEW mv_densidade_estantes_por_tipo_espaco;
-REFRESH MATERIALIZED VIEW mv_mapeamento_acervo_biblioteca_diretoria;
-REFRESH MATERIALIZED VIEW mv_relatorio_completo_hierarquia;
-```
-
----
-
-## Script de Teste / Verificação das Visões
-
-Para consultar qualquer visão ou visão materializada:
-
-```sql
--- Consultando Visões Tradicionais
-SELECT * FROM vw_livros_localizacao_completa;
-SELECT * FROM vw_espacos_sem_estantes;
-SELECT * FROM vw_autores_obras_cadastradas;
-
--- Consultando Visões Materializadas
-SELECT * FROM mv_estatisticas_por_edificacao;
-SELECT * FROM mv_ranking_autores_maior_acervo;
-SELECT * FROM mv_relatorio_completo_hierarquia;
-```
+Escolha o número da seção desejada (`1` a `5`), digite o número da operação e pressione `Enter`.
