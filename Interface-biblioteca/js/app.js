@@ -607,7 +607,7 @@
         const cap = Number(est.capacidade_livros ?? 100);
         const ocup = Number(est.exemplares_ocupados ?? 0);
         const vagas = Number(est.vagas_restantes ?? Math.max(0, cap - ocup));
-        opt.textContent = `Estante #${est.id_estante} — ${est.dominio_lado_1} / ${est.dominio_lado_2} (Ocupação: ${ocup}/${cap} exemplares — ${vagas} vaga(s) livre(s))`;
+        opt.textContent = `#${est.id_estante} · ${est.dominio_lado_1} / ${est.dominio_lado_2} (${ocup}/${cap} · ${vagas} livres)`;
         selectEstante.appendChild(opt);
       }
       if (ajuda) {
@@ -1416,9 +1416,9 @@
             <div><dt>Capacidade máxima:</dt><dd>${cap} exemplar(es)</dd></div>
             <div><dt>Ocupação atual:</dt><dd><strong>${ocup} / ${cap} exemplar(es) (${vagas} vaga(s) livre(s)) — ${qtdLivros} título(s)</strong></dd></div>
           </dl>
-          <div style="display:flex; flex-direction:column; align-items:flex-end; gap:0.5rem;">
+          <div class="ficha-estante-rodape">
             <span class="ficha-livro__id">Estante #${est.id_estante}</span>
-            <button type="button" class="botao botao--perigo" data-excluir-estante="${est.id_estante}" data-tema-estante="${est.dominio_lado_1} / ${est.dominio_lado_2}" data-qtd-livros="${qtdLivros}">
+            <button type="button" class="botao botao--perigo botao--compacto" data-excluir-estante="${est.id_estante}" data-tema-estante="${est.dominio_lado_1} / ${est.dominio_lado_2}" data-qtd-livros="${qtdLivros}">
               Excluir Estante #${est.id_estante}
             </button>
           </div>

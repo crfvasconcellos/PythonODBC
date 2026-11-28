@@ -26,8 +26,8 @@
   --fonte: "Newsreader", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
 }
 
-/* 1 rem = 10 "px de projeto". Ex.: 27 px do projeto = 2.7rem */
-html { font-size: max(4px, calc(var(--u) * 10)); }
+/* 1 rem = 10 "px de projeto", limitado entre 7.5px (legível no celular) e 11px (proporcional em telas grandes). */
+html { font-size: clamp(7.5px, calc(var(--u) * 10), 11px); }
 
 *, *::before, *::after { box-sizing: border-box; }
 
@@ -35,7 +35,8 @@ body {
   margin: 0;
   min-height: 100vh;
   min-height: 100dvh;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   background: #1b0a10;
   color: var(--linha-texto);
   font-family: var(--fonte);
@@ -82,13 +83,19 @@ body {
 .app {
   position: relative;
   z-index: 1;
+  width: 100%;
   min-height: 100vh;
   min-height: 100dvh;
+  padding: 1.2rem;
   display: grid;
   place-items: center;
 }
 
-.tela { display: grid; }
+.tela {
+  width: 100%;
+  display: grid;
+  place-items: center;
+}
 .tela[hidden] { display: none; }
 
 .tela:not([hidden]) .cartao {
@@ -103,13 +110,15 @@ body {
    Cartão de vidro
    ========================================================================== */
 .cartao {
-  width: 47rem;
-  height: 63rem;
-  padding: 2.1rem;
+  width: min(49rem, 100%);
+  height: auto;
+  max-height: calc(100dvh - 2.4rem);
+  min-height: 0;
+  padding: 1.9rem;
   display: flex;
   flex-direction: column;
-  gap: 2.1rem;
-  border-radius: 3.4rem;
+  gap: 1.6rem;
+  border-radius: 3rem;
   border: 0.1rem solid var(--vidro-borda);
   background:
     linear-gradient(135deg,
@@ -125,23 +134,29 @@ body {
     inset 0 0.15rem 0 rgba(255, 225, 210, 0.6),
     inset 0 -0.1rem 0 rgba(255, 210, 190, 0.15);
 }
-.cartao--largo { width: 50rem; }
+.cartao--largo {
+  width: min(52rem, 100%);
+  height: min(64rem, calc(100dvh - 2.4rem));
+}
 
 .titulo {
   flex: none;
-  height: 6.2rem;
+  min-height: 5.8rem;
+  padding: 0.6rem 1.4rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 2.2rem;
+  border-radius: 2rem;
   background: var(--titulo-fundo);
   box-shadow: inset 0 0.1rem 0 rgba(255, 225, 210, 0.3);
 }
 .titulo h1 {
   margin: 0;
-  font-size: 3.3rem;
+  font-size: 3.1rem;
   font-weight: 500;
   letter-spacing: 0.01em;
+  text-align: center;
+  line-height: 1.1;
   color: var(--titulo-texto);
   outline: none;
 }
@@ -149,9 +164,13 @@ body {
 .painel {
   flex: 1;
   min-height: 0;
-  padding: 2.7rem 1.5rem;
-  border-radius: 2.8rem;
+  padding: 1.8rem 1.4rem;
+  border-radius: 2.5rem;
   background: var(--painel-fundo);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--latao-escuro) transparent;
   box-shadow:
     inset 0 0.2rem 0.8rem rgba(0, 0, 0, 0.25),
     inset 0 0.1rem 0 rgba(255, 225, 210, 0.18);
@@ -163,9 +182,17 @@ body {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 1.6rem;
+  gap: 1.15rem;
 }
 .lista > li { flex: none; }
+
+/* Ajuste compacto na Tela Principal para acomodar todos os 7 botões sem corte */
+#tela-principal .painel { padding: 1.5rem 1.4rem; }
+#tela-principal .lista { gap: 1rem; }
+#tela-principal .item { min-height: 5.3rem; }
+#tela-principal .item__icone { width: 5.8rem; height: 4.1rem; }
+#tela-principal .item__divisor { height: 3.4rem; }
+#tela-principal .item__texto { font-size: 2.2rem; line-height: 1.15; }
 
 /* ==========================================================================
    Botões do menu
@@ -234,8 +261,8 @@ body {
   line-height: 1.1;
 }
 .item--longo .item__texto {
-  font-size: 2.2rem;
-  line-height: 1.1;
+  font-size: 2.05rem;
+  line-height: 1.15;
   text-wrap: balance;
 }
 
@@ -343,7 +370,7 @@ body {
 /* ==========================================================================
    Tela de despedida
    ========================================================================== */
-.cartao--aviso { width: 44rem; height: auto; }
+.cartao--aviso { width: min(44rem, 100%); height: auto; }
 .painel--aviso {
   flex: none;
   padding: 3rem 2rem;
@@ -381,15 +408,19 @@ body {
 .cartao--catalogo,
 .cartao--formulario,
 .cartao--exclusao {
-  width: 55rem;
+  width: min(55rem, 100%);
   height: min(67rem, calc(100dvh - 2.4rem));
   min-height: 0;
-  gap: 1.4rem;
+  gap: 1.25rem;
 }
-.cartao--catalogo { width: 57rem; }
+.cartao--catalogo { width: min(58rem, 100%); }
+.cartao--estantes {
+  width: min(64rem, 100%);
+  height: min(70rem, calc(100dvh - 2.4rem));
+}
 .cartao--exclusao { height: min(52rem, calc(100dvh - 2.4rem)); }
 .cartao--formulario .titulo h1,
-.cartao--exclusao .titulo h1 { font-size: 3.05rem; }
+.cartao--exclusao .titulo h1 { font-size: 2.95rem; }
 
 .catalogo-info {
   flex: none;
@@ -401,16 +432,16 @@ body {
 .catalogo-info p { margin: 0.2rem 0; }
 .catalogo-info__pendencias { color: #ffe3a2; }
 
-.corpo--catalogo { gap: 1.1rem; }
+.corpo--catalogo { gap: 1.1rem; min-height: 16rem; }
 .painel--catalogo { padding: 0; }
 .catalogo-scroll {
   height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 1.3rem;
+  gap: 1.2rem;
   overflow-x: hidden;
   overflow-y: auto;
-  padding: 1.5rem;
+  padding: 1.35rem;
   overscroll-behavior: contain;
   scrollbar-width: none;
 }
@@ -421,12 +452,12 @@ body {
   border-radius: 1.5rem;
   background: var(--linha-fundo);
   color: var(--linha-texto);
-  padding: 1.25rem 1.55rem;
+  padding: 1.2rem 1.45rem;
   box-shadow: inset 0 0.1rem 0 #fff8, 0 0.25rem 1rem rgba(22, 0, 10, 0.2);
   overflow-wrap: anywhere;
 }
 .ficha-livro dl { margin: 0; }
-.ficha-livro dl > div { display: flex; gap: 0.6rem; align-items: baseline; font-size: 2.05rem; line-height: 1.22; }
+.ficha-livro dl > div { display: flex; gap: 0.55rem; align-items: baseline; font-size: 1.95rem; line-height: 1.25; }
 .ficha-livro dt { font-weight: 600; flex: none; }
 .ficha-livro dd { margin: 0; min-width: 0; }
 .ficha-livro__id {
@@ -435,21 +466,35 @@ body {
   font-size: 1.45rem;
   color: #744451;
 }
+.ficha-estante-rodape {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.85rem;
+  padding-top: 0.7rem;
+  border-top: 0.1rem solid rgba(74, 14, 28, 0.18);
+}
+.ficha-estante-rodape .ficha-livro__id {
+  margin-top: 0;
+  font-weight: 600;
+}
 .estado-vazio {
   flex: 1;
-  min-height: 22rem;
+  min-height: 13rem;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   text-align: center;
   color: var(--titulo-texto);
-  gap: 1.1rem;
-  padding: 2rem;
+  gap: 0.75rem;
+  padding: 1.4rem;
 }
-.estado-vazio__icone { width: 5.8rem; height: 5.8rem; color: var(--latao-claro); }
-.estado-vazio h2 { font-size: 2.8rem; font-weight: 500; margin: 0; line-height: 1.1; }
-.estado-vazio p { max-width: 36rem; font-size: 1.9rem; line-height: 1.25; margin: 0; }
+.estado-vazio__icone { width: 4.4rem; height: 4.4rem; color: var(--latao-claro); flex: none; }
+.estado-vazio h2 { font-size: 2.35rem; font-weight: 500; margin: 0; line-height: 1.12; }
+.estado-vazio p { max-width: 36rem; font-size: 1.7rem; line-height: 1.28; margin: 0; }
 
 .formulario-livro {
   flex: 1;
@@ -496,24 +541,36 @@ body {
 .campo input[type="number"],
 .campo select {
   width: 100%;
-  height: 4.7rem;
-  min-height: 3.6rem;
-  padding: 0.65rem 1.15rem;
+  max-width: 100%;
+  height: 4.5rem;
+  min-height: 3.8rem;
+  padding: 0.65rem 1.1rem;
   border: 0.15rem solid transparent;
   border-radius: 1rem;
   background: #682435;
   color: var(--titulo-texto);
-  font: 500 2.2rem / 1 var(--fonte);
+  font: 500 2rem / 1.2 var(--fonte);
   outline-offset: 0.2rem;
   outline-color: var(--latao-escuro);
+}
+.campo input::placeholder {
+  color: rgba(255, 241, 230, 0.62);
+  opacity: 1;
 }
 .campo input:focus-visible,
 .campo select:focus-visible {
   border-color: var(--latao-claro);
   outline: 0.25rem solid var(--latao-escuro);
 }
-.campo select { cursor: pointer; }
-.campo small { font-size: 1.55rem; line-height: 1.2; color: #6a3c45; }
+.campo select {
+  cursor: pointer;
+  font-size: 1.7rem;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.campo small { font-size: 1.5rem; line-height: 1.25; color: #5c313b; }
 /* O título faz parte do fluxo da caixa (sem a sobreposição de <legend> em flex). */
 .campo--opcoes { gap: 0.9rem; padding-top: 1.1rem; }
 .campo--opcoes__titulo { display: block; }
@@ -576,20 +633,26 @@ body {
 .mensagem-formulario[data-tipo="erro"] { color: #ffdbd8; }
 .mensagem-formulario[data-tipo="sucesso"] { color: #e9ffde; }
 
-.barra-acoes { flex: none; display: flex; gap: 1.15rem; }
+.barra-acoes { flex: none; display: flex; flex-wrap: wrap; gap: 0.9rem; }
 .botao {
-  flex: 1;
+  flex: 1 1 12rem;
   min-width: 0;
-  min-height: 4.7rem;
-  padding: 0.7rem 1.1rem;
+  min-height: 4.4rem;
+  padding: 0.65rem 1rem;
   border-radius: 1.2rem;
   border: 0.1rem solid rgba(255, 221, 185, 0.45);
   color: var(--titulo-texto);
   background: var(--titulo-fundo);
-  font: 600 2.05rem / 1.1 var(--fonte);
+  font: 600 1.85rem / 1.15 var(--fonte);
   cursor: pointer;
   box-shadow: 0 0.3rem 1rem rgba(30, 0, 10, 0.26);
   transition: filter 0.15s ease, transform 0.15s ease;
+}
+.botao--compacto {
+  flex: none;
+  min-height: 3.6rem;
+  padding: 0.45rem 1.1rem;
+  font-size: 1.65rem;
 }
 .botao--destaque { background: linear-gradient(150deg, #f1c879, #c58b31); color: #39121d; }
 .botao--perigo { background: linear-gradient(150deg, #a83847, #6b1529); }
@@ -631,7 +694,7 @@ body {
 .formulario-consulta .campo { padding: 0.8rem 1.1rem; }
 .formulario-consulta .campo label { font-size: 2.2rem; }
 .formulario-consulta .campo input[type="text"] { height: 4.25rem; }
-.formulario-consulta .botao { min-height: 4.2rem; }
+.formulario-consulta .botao { flex: none; width: 100%; min-height: 4.2rem; }
 .resumo-consulta {
   flex: none;
   margin: 0;
@@ -641,10 +704,10 @@ body {
   line-height: 1.25;
 }
 .cartao--joins {
-  width: 51rem;
+  width: min(51rem, 100%);
   height: min(65rem, calc(100dvh - 2.4rem));
   min-height: 0;
-  gap: 1.7rem;
+  gap: 1.5rem;
 }
 .cartao--joins .titulo h1 { font-size: 3.2rem; }
 .painel--joins { padding: 1.5rem; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--latao-escuro) transparent; }
@@ -809,11 +872,44 @@ body {
 .campos-em-linha {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.9rem;
+  gap: 0.85rem;
 }
-.campos-em-linha .campo { min-width: 0; gap: 0.6rem; }
-.campos-em-linha .campo label { font-size: 1.85rem; line-height: 1.1; }
-.campos-em-linha .campo input { min-width: 0; }
+.campos-em-linha .campo { min-width: 0; gap: 0.45rem; }
+.campos-em-linha .campo label { font-size: 1.8rem; line-height: 1.12; }
+.campos-em-linha .campo input { min-width: 0; height: 4.1rem; }
+
+/* Grid compacto da tela Gerenciar Estantes para dar folga à lista */
+.formulario-consulta--estante {
+  padding: 0.85rem;
+  gap: 0.75rem;
+}
+.campos-estante {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 12.5rem;
+  gap: 0.75rem;
+}
+.formulario-consulta--estante .campo {
+  min-width: 0;
+  padding: 0.65rem 0.9rem;
+  gap: 0.4rem;
+}
+.formulario-consulta--estante .campo label {
+  font-size: 1.7rem;
+  line-height: 1.12;
+}
+.formulario-consulta--estante .campo input {
+  height: 3.9rem;
+  min-height: 3.5rem;
+  font-size: 1.8rem;
+}
+.cartao--estantes .resumo-consulta {
+  font-size: 1.55rem;
+  padding: 0.2rem 0.6rem;
+  line-height: 1.25;
+}
+.cartao--estantes .corpo--catalogo {
+  min-height: 18rem;
+}
 .formulario-consulta__dica {
   margin: 0;
   padding: 0.1rem 0.65rem;
@@ -833,14 +929,96 @@ body {
 .ficha-faixa dl { display: grid; gap: 0.5rem; }
 .ficha-faixa dl > div { line-height: 1.2; font-size: 1.95rem; }
 @media (max-width: 700px) {
+  .cartao,
+  .cartao--largo,
+  .cartao--catalogo,
+  .cartao--estantes,
+  .cartao--formulario,
+  .cartao--exclusao,
+  .cartao--joins,
   .cartao--faixa-exemplares,
   .cartao--autores-multigenero {
-    width: min(57rem, calc(100vw - 2.6rem));
-    height: min(72rem, calc(100dvh - 2.6rem));
-    padding: 1.5rem;
+    width: 100%;
+    padding: 1.35rem;
+    border-radius: 2.4rem;
+    gap: 1.15rem;
   }
+  .cartao--catalogo,
+  .cartao--estantes,
+  .cartao--formulario,
+  .cartao--exclusao,
+  .cartao--largo,
+  .cartao--joins {
+    height: min(74rem, calc(100dvh - 2.4rem));
+  }
+  .titulo { min-height: 5.2rem; border-radius: 1.7rem; }
+  .titulo h1,
   .cartao--faixa-exemplares .titulo h1,
-  .cartao--autores-multigenero .titulo h1 { font-size: 2.45rem; }
-  .campos-em-linha .campo label { font-size: 1.75rem; }
-  .formulario-consulta__dica { font-size: 1.5rem; }
+  .cartao--autores-multigenero .titulo h1 { font-size: 2.35rem; }
+  .campos-em-linha .campo label { font-size: 1.65rem; }
+  .formulario-consulta__dica { font-size: 1.45rem; }
+  .campos-estante {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .campos-estante .campo--capacidade {
+    grid-column: 1 / -1;
+  }
+  .cartao--estantes .corpo--catalogo {
+    min-height: 16rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .app { padding: 0.85rem; }
+  .cartao { max-height: calc(100dvh - 1.7rem); }
+  .cartao--catalogo,
+  .cartao--estantes,
+  .cartao--formulario,
+  .cartao--exclusao,
+  .cartao--largo,
+  .cartao--joins {
+    height: calc(100dvh - 1.7rem);
+  }
+  #tela-principal .item { min-height: 4.8rem; padding: 0.45rem 2.2rem 0.45rem 0.7rem; }
+  #tela-principal .item__icone { width: 4.8rem; height: 3.6rem; }
+  #tela-principal .item__texto { font-size: 1.9rem; }
+  .campos-em-linha {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6rem;
+  }
+  .campos-estante {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem;
+  }
+  .campos-estante .campo--capacidade {
+    grid-column: 1 / -1;
+  }
+  .formulario-consulta--estante .campo { padding: 0.5rem 0.7rem; }
+  .formulario-consulta--estante .campo label { font-size: 1.55rem; }
+  .formulario-consulta--estante .campo input { height: 3.5rem; min-height: 3.2rem; font-size: 1.65rem; }
+  .barra-acoes {
+    gap: 0.65rem;
+  }
+  .barra-acoes .botao {
+    flex: 1 1 42%;
+    min-height: 3.9rem;
+    padding: 0.55rem 0.8rem;
+    font-size: 1.65rem;
+  }
+}
+
+@media (max-height: 540px) {
+  body { overflow-y: auto; }
+  .app { align-items: start; }
+  .cartao,
+  .cartao--largo,
+  .cartao--catalogo,
+  .cartao--estantes,
+  .cartao--formulario,
+  .cartao--exclusao,
+  .cartao--joins {
+    height: auto;
+    max-height: none;
+  }
+  .corpo--catalogo { min-height: 22rem; max-height: 36rem; }
 }

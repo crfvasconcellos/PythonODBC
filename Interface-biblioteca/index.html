@@ -273,19 +273,19 @@
           <div class="formulario-livro__rolagem">
             <div class="campo">
               <label for="cadastro-nome">Insira nome do livro:</label>
-              <input id="cadastro-nome" name="nome" type="text" maxlength="255" autocomplete="off" required>
+              <input id="cadastro-nome" name="nome" type="text" maxlength="255" placeholder="Ex.: Dom Casmurro" autocomplete="off" required>
             </div>
             <div class="campo">
               <label for="cadastro-autor">Insira nome do autor(a):</label>
-              <input id="cadastro-autor" name="autor" type="text" maxlength="255" autocomplete="off" required>
+              <input id="cadastro-autor" name="autor" type="text" maxlength="255" placeholder="Ex.: Machado de Assis" autocomplete="off" required>
             </div>
             <div class="campo">
               <label for="cadastro-exemplares">Insira número de exemplares:</label>
-              <input id="cadastro-exemplares" name="numero_de_exemplares" type="number" min="0" max="999999" step="1" required>
+              <input id="cadastro-exemplares" name="numero_de_exemplares" type="number" min="0" max="999999" step="1" placeholder="Ex.: 5" required>
             </div>
             <div class="campo">
               <label for="cadastro-genero">Insira o gênero:</label>
-              <input id="cadastro-genero" name="genero" type="text" maxlength="100" autocomplete="off" required>
+              <input id="cadastro-genero" name="genero" type="text" maxlength="100" placeholder="Ex.: Romance Clássico" autocomplete="off" required>
             </div>
             <div class="campo campo--opcoes" role="radiogroup" aria-labelledby="cadastro-emprestimo-titulo">
               <span class="campo--opcoes__titulo" id="cadastro-emprestimo-titulo">Pode ser emprestado?</span>
@@ -322,24 +322,24 @@
           <div class="formulario-livro__rolagem">
             <div class="campo">
               <label for="atualizacao-id">ID do livro que deseja atualizar:</label>
-              <input id="atualizacao-id" name="id_livro" type="number" min="1" step="1" required>
+              <input id="atualizacao-id" name="id_livro" type="number" min="1" step="1" placeholder="Ex.: 1" required>
             </div>
             <p class="aviso-campo">Informe os novos dados do livro. A atualização será preparada para envio à API.</p>
             <div class="campo">
               <label for="atualizacao-nome">Novo nome do livro:</label>
-              <input id="atualizacao-nome" name="nome" type="text" maxlength="255" required>
+              <input id="atualizacao-nome" name="nome" type="text" maxlength="255" placeholder="Ex.: Dom Casmurro (Edição Revisada)" required>
             </div>
             <div class="campo">
               <label for="atualizacao-autor">Novo nome do autor(a):</label>
-              <input id="atualizacao-autor" name="autor" type="text" maxlength="255" required>
+              <input id="atualizacao-autor" name="autor" type="text" maxlength="255" placeholder="Ex.: Machado de Assis" required>
             </div>
             <div class="campo">
               <label for="atualizacao-exemplares">Novo número de exemplares:</label>
-              <input id="atualizacao-exemplares" name="numero_de_exemplares" type="number" min="0" max="999999" step="1" required>
+              <input id="atualizacao-exemplares" name="numero_de_exemplares" type="number" min="0" max="999999" step="1" placeholder="Ex.: 10" required>
             </div>
             <div class="campo">
               <label for="atualizacao-genero">Novo gênero:</label>
-              <input id="atualizacao-genero" name="genero" type="text" maxlength="100" required>
+              <input id="atualizacao-genero" name="genero" type="text" maxlength="100" placeholder="Ex.: Romance Clássico" required>
             </div>
             <div class="campo campo--opcoes" role="radiogroup" aria-labelledby="atualizacao-emprestimo-titulo">
               <span class="campo--opcoes__titulo" id="atualizacao-emprestimo-titulo">Pode ser emprestado?</span>
@@ -458,7 +458,7 @@
             <li><button type="button" class="item item--join" data-acao="voltar-avancadas">
               <span class="item__icone" aria-hidden="true"><svg class="icone"><use href="#i-voltar"/></svg></span>
               <span class="item__divisor" aria-hidden="true"></span>
-              <span class="item__texto">Voltar ao menu</span>
+              <span class="item__texto">Voltar às ações avançadas</span>
             </button></li>
           </ul>
         </div>
@@ -591,15 +591,17 @@
           <h1 id="titulo-acervo-critico" tabindex="-1">Análise de Acervo Crítico</h1>
         </header>
         <form id="form-acervo-critico" class="formulario-consulta">
-          <div class="campo">
-            <label for="acervo-genero-alvo">Domínio das estantes:</label>
-            <input id="acervo-genero-alvo" name="genero_alvo" type="text" maxlength="100" autocomplete="off" placeholder="Ex.: Literatura" required>
-            <small>Corresponde ao campo domínio_lado_1 da estante (parâmetro genero_alvo no Python).</small>
-          </div>
-          <div class="campo">
-            <label for="acervo-genero-comparacao">Gênero dos livros para comparação:</label>
-            <input id="acervo-genero-comparacao" name="genero_comparacao" type="text" maxlength="100" autocomplete="off" placeholder="Ex.: Ficção" required>
-            <small>Mostra livros nas estantes selecionadas com mais exemplares do que pelo menos um livro deste gênero.</small>
+          <div class="campos-em-linha">
+            <div class="campo">
+              <label for="acervo-genero-alvo">Domínio das estantes:</label>
+              <input id="acervo-genero-alvo" name="genero_alvo" type="text" maxlength="100" autocomplete="off" placeholder="Ex.: Ficção" required>
+              <small>Filtra <code>dominio_lado_1</code> da estante.</small>
+            </div>
+            <div class="campo">
+              <label for="acervo-genero-comparacao">Gênero de comparação:</label>
+              <input id="acervo-genero-comparacao" name="genero_comparacao" type="text" maxlength="100" autocomplete="off" placeholder="Ex.: Romance" required>
+              <small>Compara exemplares (&gt; SOME) com este gênero.</small>
+            </div>
           </div>
           <button type="submit" class="botao botao--destaque" id="botao-acervo-critico">Analisar acervo</button>
         </form>
@@ -700,13 +702,15 @@
           <h1 id="titulo-autores-multigenero" tabindex="-1">Autores Multigênero</h1>
         </header>
         <form id="form-autores-multigenero" class="formulario-consulta">
-          <div class="campo">
-            <label for="multigenero-genero1">Primeiro gênero:</label>
-            <input id="multigenero-genero1" name="genero1" type="text" maxlength="100" autocomplete="off" placeholder="Ex.: Fantasia" required>
-          </div>
-          <div class="campo">
-            <label for="multigenero-genero2">Segundo gênero:</label>
-            <input id="multigenero-genero2" name="genero2" type="text" maxlength="100" autocomplete="off" placeholder="Ex.: Terror" required>
+          <div class="campos-em-linha">
+            <div class="campo">
+              <label for="multigenero-genero1">Primeiro gênero:</label>
+              <input id="multigenero-genero1" name="genero1" type="text" maxlength="100" autocomplete="off" placeholder="Ex.: Fantasia" required>
+            </div>
+            <div class="campo">
+              <label for="multigenero-genero2">Segundo gênero:</label>
+              <input id="multigenero-genero2" name="genero2" type="text" maxlength="100" autocomplete="off" placeholder="Ex.: Terror" required>
+            </div>
           </div>
           <p class="formulario-consulta__dica">O relatório apresenta uma vez cada autor que tenha pelo menos uma obra cadastrada em cada um dos dois gêneros informados.</p>
           <button type="submit" class="botao botao--destaque" id="botao-autores-multigenero">Gerar relatório</button>
@@ -734,23 +738,25 @@
 
     <!-- ============ GERENCIAR ESTANTES (CRIAR / LISTAR / REMOVER) ============ -->
     <section class="tela" id="tela-estantes" aria-labelledby="titulo-gerenciar-estantes" hidden>
-      <div class="cartao cartao--catalogo">
+      <div class="cartao cartao--catalogo cartao--estantes">
         <header class="titulo">
           <h1 id="titulo-gerenciar-estantes" tabindex="-1">Gerenciar Estantes</h1>
         </header>
 
-        <form id="form-criar-estante" class="formulario-consulta">
-          <div class="campo">
-            <label for="estante-dominio1">Tema / Domínio Lado 1:</label>
-            <input id="estante-dominio1" name="dominio_lado_1" type="text" maxlength="100" placeholder="Ex.: Ficção Científica" required>
-          </div>
-          <div class="campo">
-            <label for="estante-dominio2">Tema / Domínio Lado 2:</label>
-            <input id="estante-dominio2" name="dominio_lado_2" type="text" maxlength="100" placeholder="Ex.: Romance Clássico" required>
-          </div>
-          <div class="campo">
-            <label for="estante-capacidade">Capacidade de livros:</label>
-            <input id="estante-capacidade" name="numero_de_livros" type="number" min="1" max="999999" value="100" required>
+        <form id="form-criar-estante" class="formulario-consulta formulario-consulta--estante">
+          <div class="campos-estante">
+            <div class="campo">
+              <label for="estante-dominio1">Domínio Lado 1:</label>
+              <input id="estante-dominio1" name="dominio_lado_1" type="text" maxlength="100" placeholder="Ex.: Ficção Científica" required>
+            </div>
+            <div class="campo">
+              <label for="estante-dominio2">Domínio Lado 2:</label>
+              <input id="estante-dominio2" name="dominio_lado_2" type="text" maxlength="100" placeholder="Ex.: Romance Clássico" required>
+            </div>
+            <div class="campo campo--capacidade">
+              <label for="estante-capacidade">Capacidade:</label>
+              <input id="estante-capacidade" name="numero_de_livros" type="number" min="1" max="999999" value="100" required>
+            </div>
           </div>
           <button type="submit" class="botao botao--destaque" id="botao-criar-estante">+ Criar Nova Estante</button>
         </form>
